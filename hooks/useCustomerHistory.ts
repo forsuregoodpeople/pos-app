@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { CustomerInfo } from './useCustomer';
-import { Invoice } from './useTransaction';
+import { Transaction } from './useTransaction';
 
 export function useCustomerHistory(searchQuery: string) {
-    const [customerHistory, setCustomerHistory] = useState<Invoice[]>([]);
+    const [customerHistory, setCustomerHistory] = useState<Transaction[]>([]);
 
     useEffect(() => {
         if (searchQuery.trim().length > 0) {
             const savedInvoices = localStorage.getItem("invoices");
             if (savedInvoices) {
-                const invoices: Invoice[] = JSON.parse(savedInvoices);
+                const invoices: Transaction[] = JSON.parse(savedInvoices);
 
                 // Find all unique customers matching the search
                 const matchingCustomers = new Map<string, CustomerInfo>();
@@ -28,7 +28,7 @@ export function useCustomerHistory(searchQuery: string) {
 
                 // Get all transactions for matching customers
                 const uniqueCustomers = Array.from(matchingCustomers.values());
-                const historyResults: Invoice[] = [];
+                const historyResults: Transaction[] = [];
 
                 uniqueCustomers.forEach(cust => {
                     const customerTransactions = invoices.filter(inv =>
