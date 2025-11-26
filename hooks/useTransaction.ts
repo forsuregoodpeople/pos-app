@@ -14,10 +14,12 @@ export interface Transaction {
 export function useTransaction() {
     const [invoiceNumber, setInvoiceNumber] = useState('INV-LOADING');
     const [date] = useState(() => new Date().toISOString().split('T')[0]);
+    const rand : number = Math.floor((Math.random() * 1000) + 1);
+
 
     useEffect(() => {
         const date = new Date();
-        const newInvoiceNumber = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+        const newInvoiceNumber = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${String(rand).padStart(3, '0')}`;
         setInvoiceNumber(newInvoiceNumber);
     }, []);
 

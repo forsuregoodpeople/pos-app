@@ -6,6 +6,7 @@ export interface CartItem {
     name: string;
     price: number;
     qty: number;
+    discount: number;
 }
 
 export function useCart() {
@@ -18,7 +19,7 @@ export function useCart() {
                 c.id === item.id ? { ...c, qty: c.qty + 1 } : c
             ));
         } else {
-            setCart([...cart, { ...item, type, qty: 1 }]);
+            setCart([...cart, { ...item, type, qty: 1, discount: 0 }]);
         }
         return item.name;
     };
@@ -35,8 +36,24 @@ export function useCart() {
         setCart(cart.map(c => c.id === id ? { ...c, qty } : c));
     };
 
-    const calculateTotal = () => {
+    const updatePrice = (id: string, newPrice: number) => {
+        setCart(cart.map(c => c.id === id ? { ...c, price: newPrice } : c));
+    };
+
+    const updateDiscount = (id: string, discount: number) => {
+        setCart(cart.map(c => c.id === id ? { ...c, discount } : c));
+    };
+
+    const calculateSubtotal = () => {
         return cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    };
+
+    const calculateTotal = () => {
+        return cart.reduce((sum, item) => {
+            const itemTotal = item.price * item.qty;
+            const discountAmount = itemTotal * (item.discount / 100);
+            return sum + (itemTotal - discountAmount);
+        }, 0);
     };
 
     const clearCart = () => {
@@ -48,6 +65,9 @@ export function useCart() {
         addToCart,
         removeFromCart,
         updateQty,
+        updatePrice,
+        updateDiscount,
+        calculateSubtotal,
         calculateTotal,
         clearCart,
     };

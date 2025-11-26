@@ -43,13 +43,22 @@ export default function ProductGrid({
     );
 
     const displayItems =
-        activeTab === "services" ? filteredServices : filteredParts;
+        (activeTab === "services" ? filteredServices : filteredParts);
     const isEmpty = displayItems.length === 0;
 
+    const formatCurrency = (price: number) => {
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(price);
+    };
+
     return (
-        <div className="flex-1 flex flex-col w-full overflow-hidden">
+        <div className="flex-1 flex flex-col w-full">
             {/* Search Bar */}
-            <div className="relative w-full p-4 pb-3 flex-shrink-0">
+            <div className="relative w-full p-4 pb-3">
                 <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                     type="text"
@@ -60,9 +69,8 @@ export default function ProductGrid({
                 />
             </div>
 
-            {/* Products Grid - FULL WIDTH */}
-            <div className="flex-1 w-full overflow-y-auto px-4 pb-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+            <div className="flex-1 flex w-full overflow-y-auto px-3 pb-3">
+                <div className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full auto-rows-max">
                     {isEmpty && (
                         <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
                             <div className="text-lg font-medium">
@@ -83,7 +91,7 @@ export default function ProductGrid({
                             onClick={() =>
                                 onAddToCart(item, activeTab === "services" ? "service" : "part")
                             }
-                            className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all text-left border-2 border-transparent h-full flex flex-col justify-between ${
+                            className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all text-left flex flex-col justify-between h-fit border-2 border-transparent ${
                                 activeTab === "services"
                                     ? "hover:border-blue-500"
                                     : "hover:border-green-500"
@@ -93,7 +101,7 @@ export default function ProductGrid({
                                 {item.name}
                             </div>
                             <div className={`${activeTab === "services" ? "text-blue-600" : "text-green-600"} font-semibold text-sm`}>
-                                Rp {item.price.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                {formatCurrency(item.price)}
                             </div>
                         </button>
                     ))}

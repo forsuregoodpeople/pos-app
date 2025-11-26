@@ -17,7 +17,7 @@ import { PrintReceipt } from "@/components/pos/PrintReceipt";
 import ProductGrid from "@/components/pos/ProductGrid";
 
 export default function PointOnSale() {
-    const { cart, addToCart, removeFromCart, updateQty, calculateTotal, clearCart } = useCart();
+    const { cart, addToCart, removeFromCart, updateQty, updatePrice, updateDiscount, calculateSubtotal, calculateTotal, clearCart } = useCart();
     const { customer, updateCustomer, setCustomerFromHistory, clearCustomer } = useCustomer();
     const { services, parts } = useProducts();
     const { invoiceNumber, date, saveInvoice } = useTransaction();
@@ -29,6 +29,8 @@ export default function PointOnSale() {
     const [searchQuery, setSearchQuery] = useState("");
     const [productSearchQuery, setProductSearchQuery] = useState("");
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [ppn, setPpn] = useState(11);
+    const [biayaLain, setBiayaLain] = useState(0);
 
     const customerHistory = useCustomerHistory(searchQuery);
 
@@ -43,10 +45,12 @@ export default function PointOnSale() {
 
     const handleAddToCart = (item: { id: string; name: string; price: number }, type: "service" | "part") => {
         const itemName = addToCart(item, type);
-        toast.success(`${itemName} ditambahkan`);
+        toast.success(`${itemName} ditambahkan`, {
+            position: 'bottom-left',
+        });
     };
 
-    const handleSelectCustomer = (historyCustomer: { name: string; phone: string; kmMasuk: string; mobil: string; platNomor: string }) => {
+    const handleSelectCustomer = (historyCustomer: { name: string; phone: string; kmMasuk: string; mobil: string; platNomor: string; tipe: string }) => {
         setCustomerFromHistory(historyCustomer);
         toast.success("Data pelanggan dipilih");
     };
@@ -62,49 +66,46 @@ export default function PointOnSale() {
             return;
         }
 
-        // Save Transaction
-        saveInvoice(customer, cart, calculateTotal());
+        // Add mechanics to customer data before saving
+        const customerWithMechanics = {
+            ...customer,
+            mekaniks: mechanics.map(m => ({
+                name: m.name,
+                percentage: m.percentage
+            }))
+        };
+
+        const subtotal = calculateSubtotal();
+        const total = calculateTotal();
+        const ppnAmount = (total * 11) / 100;
+        const grandTotal = total + ppnAmount + biayaLain;
+
+        console.log('Saving transaction with mechanics:', {
+            customer: customerWithMechanics,
+            mechanics: mechanics,
+            cart: cart,
+            subtotal,
+            ppn: ppnAmount,
+            biayaLain,
+            grandTotal
+        });
+
+        const result = saveInvoice(customerWithMechanics, cart, grandTotal);
+        console.log('Transaction saved result:', result);
         toast.success("Transaksi berhasil disimpan!");
 
-        // Print
         window.print();
 
-        // Reset
         clearCart();
         clearCustomer();
         clearMechanics();
         setSearchQuery("");
+        setPpn(11);
+        setBiayaLain(0);
     };
 
     return (
-        <>
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .printable-receipt,
-          .printable-receipt * {
-            visibility: visible;
-          }
-          .printable-receipt {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm;
-            background: white !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          * {
-            color: black !important;
-            background: white !important;
-          }
-        }
-      `}} />
-
+        <div className="w-full h-screen flex flex-col">
             <CustomerModal
                 isOpen={showCustomerModal}
                 customer={customer}
@@ -127,13 +128,9 @@ export default function PointOnSale() {
                 onSave={updateMechanics}
             />
 
-            {/* POS Layout */}
-            <div className="flex flex-col w-full lg:flex-row h-screen gap-0 no-print relative">
-                {/* Left Side - Products with Tabs */}
-                <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden lg:mr-96">
-                    {/* ^^^ Tambahkan lg:mr-96 untuk memberi ruang ke cart */}
+            <div className="w-full flex-1 flex flex-col lg:flex-row bg-gray-50 overflow-hidden">
+                <div className="flex-1 min-w-0 h-full flex flex-col bg-zinc-50 overflow-hidden">
 
-                    {/* Tabs */}
                     <TabsComponent
                         activeTab={activeTab}
                         servicesCount={services.length}
@@ -146,7 +143,6 @@ export default function PointOnSale() {
                         }}
                     />
 
-                    {/* Product Grid */}
                     <ProductGrid
                         activeTab={activeTab}
                         services={services}
@@ -157,7 +153,28 @@ export default function PointOnSale() {
                     />
                 </div>
 
-                {/* Bottom Cart - Mobile (Fixed) */}
+
+                <div className="lg:w-80 bg-white border-l flex-col shadow-lg">
+                    <CartItems
+                        cart={cart}
+                        customer={customer}
+                        invoiceNumber={invoiceNumber}
+                        total={calculateTotal()}
+                        subtotal={calculateSubtotal()}
+                        biayaLain={biayaLain}
+                        mechanics={mechanics}
+                        onRemove={removeFromCart}
+                        onUpdateQty={updateQty}
+                        onUpdatePrice={updatePrice}
+                        onUpdateDiscount={updateDiscount}
+                        onBiayaLainChange={setBiayaLain}
+                        onCustomerClick={() => setShowCustomerModal(true)}
+                        onMechanicClick={() => setShowMechanicModal(true)}
+                        onCheckout={handleCheckout}
+                        isMobile={false}
+                    />
+                </div>
+
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t shrink-0 lg:hidden z-40 no-print">
                     <button
                         onClick={() => {
@@ -178,7 +195,6 @@ export default function PointOnSale() {
                     </button>
                 </div>
 
-                {/* Mobile Cart Panel */}
                 <div
                     id="mobile-cart"
                     className="fixed inset-0 bg-white z-50 transition-transform translate-y-full lg:hidden no-print"
@@ -188,42 +204,33 @@ export default function PointOnSale() {
                         customer={customer}
                         invoiceNumber={invoiceNumber}
                         total={calculateTotal()}
+                        subtotal={calculateSubtotal()}
+                        biayaLain={biayaLain}
                         mechanics={mechanics}
                         onRemove={removeFromCart}
                         onUpdateQty={updateQty}
+                        onUpdatePrice={updatePrice}
+                        onUpdateDiscount={updateDiscount}
+                        onBiayaLainChange={setBiayaLain}
                         onCustomerClick={() => setShowCustomerModal(true)}
                         onMechanicClick={() => setShowMechanicModal(true)}
                         onCheckout={handleCheckout}
                         isMobile={true}
                     />
                 </div>
-
-                {/* Desktop Cart (Sidebar) */}
-                <div className="hidden lg:flex lg:w-96 bg-white border-l flex-col shadow-lg fixed right-0 top-0 bottom-0 z-30">
-                    <CartItems
-                        cart={cart}
-                        customer={customer}
-                        invoiceNumber={invoiceNumber}
-                        total={calculateTotal()}
-                        mechanics={mechanics}
-                        onRemove={removeFromCart}
-                        onUpdateQty={updateQty}
-                        onCustomerClick={() => setShowCustomerModal(true)}
-                        onMechanicClick={() => setShowMechanicModal(true)}
-                        onCheckout={handleCheckout}
-                        isMobile={false}
-                    />
-                </div>
             </div>
 
-            {/* Printable Receipt */}
-            <PrintReceipt
-                invoiceNumber={invoiceNumber}
-                date={date}
-                customer={customer}
-                items={cart}
-                total={calculateTotal()}
-            />
-        </>
+            <div className="print-only">
+                <PrintReceipt
+                    invoiceNumber={invoiceNumber}
+                    date={date}
+                    customer={customer}
+                    items={cart}
+                    subtotal={calculateSubtotal()}
+                    biayaLain={biayaLain}
+                    total={calculateTotal()}
+                />
+            </div>
+        </div>
     );
 }

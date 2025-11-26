@@ -1,14 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Search, Car, Phone, Calendar, Receipt } from "lucide-react";
+import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Transaction } from "@/hooks/useTransaction";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAdvancedAIAnalysis } from "@/hooks/useAdvancedAIAnalysis";
+import { useTransactionFilters } from "@/hooks/useTransactionFilters";
+import { TransactionDetailModal } from "@/components/history/TransactionDetailModal";
+import { AdvancedKeyMetrics } from "@/components/history/AdvancedChartComponents";
+import { HumanInsightsAnalysis } from "@/components/history/HumanInsightsAnalysis";
 
 export default function HistoryPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
+    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
+    const [dateFilter, setDateFilter] = useState<string>("all");
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+    const [activeTab, setActiveTab] = useState<string>("overview");
 
     useEffect(() => {
         loadTransactions();
@@ -18,18 +31,26 @@ export default function HistoryPage() {
         const saved = localStorage.getItem("invoices");
         if (saved) {
             const data = JSON.parse(saved);
-            setTransactions(data.sort((a: Transaction, b: Transaction) => 
+            setTransactions(data.sort((a: Transaction, b: Transaction) =>
                 new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
             ));
         }
         setLoading(false);
     };
 
-    const filteredTransactions = transactions.filter(transaction =>
-        transaction.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.customer.platNomor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredTransactions = useTransactionFilters(
+        transactions,
+        searchQuery,
+        customerTypeFilter,
+        dateFilter,
+        startDate,
+        endDate
     );
+
+    const aiAnalysisResponse = useAdvancedAIAnalysis(filteredTransactions);
+    const aiData = aiAnalysisResponse.success ? aiAnalysisResponse.data : null;
+
+
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('id-ID', {
@@ -49,9 +70,10 @@ export default function HistoryPage() {
             </header>
 
             <div className="p-6">
-                {/* Search Bar */}
-                <div className="mb-6">
-                    <div className="relative max-w-md">
+               
+                {/* Search and Filter Bar */}
+                <div className="mb-6 flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
@@ -60,6 +82,64 @@ export default function HistoryPage() {
                             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="Cari nama, plat nomor, atau no. transaksi..."
                         />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <div className="relative">
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
+                                <SelectTrigger className="pl-10 w-40">
+                                    <SelectValue placeholder="Tipe Pelanggan" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Tipe</SelectItem>
+                                    <SelectItem value="umum">Umum</SelectItem>
+                                    <SelectItem value="perusahaan">Perusahaan</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                            <Select value={dateFilter} onValueChange={(value) => {
+                                setDateFilter(value);
+                                if (value !== "all") {
+                                    setStartDate("");
+                                    setEndDate("");
+                                }
+                            }}>
+                                <SelectTrigger className="w-40">
+                                    <SelectValue placeholder="Filter Tanggal" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Waktu</SelectItem>
+                                    <SelectItem value="today">Hari Ini</SelectItem>
+                                    <SelectItem value="week">7 Hari Terakhir</SelectItem>
+                                    <SelectItem value="month">Bulan Ini</SelectItem>
+                                    <SelectItem value="year">Tahun Ini</SelectItem>
+                                    <SelectItem value="custom">Custom Range</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            
+                            {dateFilter === "custom" && (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                        placeholder="Dari tanggal"
+                                    />
+                                    <span className="text-gray-500">s/d</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                        placeholder="Sampai tanggal"
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -82,8 +162,8 @@ export default function HistoryPage() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {filteredTransactions.map((transaction) => (
-                            <div key={transaction.invoiceNumber} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        {filteredTransactions.map((transaction, index) => (
+                            <div key={`${transaction.invoiceNumber}-${index}`} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
@@ -131,9 +211,22 @@ export default function HistoryPage() {
                                 </div>
 
                                 <div className="mt-3 pt-3 border-t">
-                                    <div className="flex items-center justify-between text-xs text-gray-500">
-                                        <span>{transaction.items.length} item</span>
-                                        <span>{transaction.date}</span>
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-xs text-gray-500">
+                                            <span>{transaction.items.length} item</span>
+                                            <span className="mx-2">•</span>
+                                            <span>{transaction.date}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                console.log('Transaction clicked:', transaction);
+                                                setSelectedTransaction(transaction);
+                                            }}
+                                            className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                                        >
+                                            <Eye className="w-3 h-3" />
+                                            Detail
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -141,6 +234,13 @@ export default function HistoryPage() {
                     </div>
                 )}
             </div>
+
+            {/* Transaction Detail Modal */}
+            <TransactionDetailModal
+                transaction={selectedTransaction}
+                isOpen={!!selectedTransaction}
+                onClose={() => setSelectedTransaction(null)}
+            />
         </SidebarInset>
     );
 }

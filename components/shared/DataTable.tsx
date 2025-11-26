@@ -53,6 +53,7 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
     const [form, setForm] = useState<{ open: boolean; edit?: T }>({ open: false });
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [deleteItem, setDeleteItem] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
     const openForm = (item?: T) => {
         setForm({ open: true, edit: item });
@@ -62,6 +63,13 @@ export function DataTable<T extends { id: string }>({
     const closeForm = () => {
         setForm({ open: false });
         setFormData({});
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deleteItem.id) {
+            onDelete(deleteItem.id);
+            setDeleteItem({ open: false, id: null });
+        }
     };
 
     const submit = (e: React.FormEvent) => {
@@ -123,6 +131,22 @@ export function DataTable<T extends { id: string }>({
                 </DialogContent>
             </Dialog>
 
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={deleteItem.open} onOpenChange={(open) => setDeleteItem({ ...deleteItem, open })}>
+                <AlertDialogContent>
+                    <AlertDialogTitle>Hapus Data</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                    <div className="flex gap-2 justify-end">
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="text-white bg-red-500">
+                            Hapus
+                        </AlertDialogAction>
+                    </div>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* Table */}
             {loading ? (
                 <div className="p-6 text-center text-gray-500">Loading...</div>
@@ -167,18 +191,13 @@ export function DataTable<T extends { id: string }>({
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </Button>
-                                                <AlertDialog>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            if (confirm('Hapus data ini?')) onDelete(item.id);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </AlertDialog>
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => setDeleteItem({ open: true, id: item.id })}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

@@ -1,4 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+
+export interface MechanicInfo {
+    name: string;
+    percentage: number;
+}
 
 export interface CustomerInfo {
     name: string;
@@ -6,6 +11,9 @@ export interface CustomerInfo {
     kmMasuk: string;
     mobil: string;
     platNomor: string;
+    tipe : string;
+    mekanik?: string;
+    mekaniks?: MechanicInfo[];
 }
 
 export function useCustomer() {
@@ -14,7 +22,10 @@ export function useCustomer() {
         phone: "",
         kmMasuk: "",
         mobil: "",
-        platNomor: ""
+        platNomor: "",
+        tipe : "",
+        mekanik: "",
+        mekaniks: []
     });
 
     const updateCustomer = (field: keyof CustomerInfo, value: string) => {
@@ -31,7 +42,10 @@ export function useCustomer() {
             phone: "",
             kmMasuk: "",
             mobil: "",
-            platNomor: ""
+            platNomor: "",
+            tipe : "",
+            mekanik: "",
+            mekaniks: []
         });
     };
 

@@ -10,7 +10,6 @@ export default function DataBarangPage() {
     const { items, loading, addItem, updateItem, deleteItem } = useDataBarang();
     const { syncPartsFromBarang } = useProducts();
 
-    // Sync parts data when barang data changes
     useEffect(() => {
         syncPartsFromBarang();
     }, [items]);
@@ -35,7 +34,7 @@ export default function DataBarangPage() {
                     onEdit={(id, item) => updateItem(id, item)}
                     onDelete={(id) => deleteItem(id)}
                     columns={columns}
-                    title="# Data Barang"
+                    title="Data Barang"
                 />
             </div>
         </SidebarInset>

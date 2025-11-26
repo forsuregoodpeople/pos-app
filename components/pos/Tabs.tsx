@@ -15,7 +15,7 @@ interface TabsProps {
 export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChange, onToggleFullscreen, isFullscreen = false }: TabsProps) {
     return (
         <div className="bg-white border-b shrink-0">
-            <div className="flex items-center">
+            <div className="flex justify-center items-center">
                 <button
                     onClick={() => {
                         onTabChange("services");

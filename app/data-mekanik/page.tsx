@@ -10,8 +10,6 @@ export default function DataMekanikPage() {
 
     const columns = [
         { key: 'name' as const, label: 'Nama Mekanik', type: 'text' as const },
-        { key: 'phone' as const, label: 'No. HP', type: 'text' as const },
-        { key: 'email' as const, label: 'Email', type: 'text' as const },
     ];
 
     return (
