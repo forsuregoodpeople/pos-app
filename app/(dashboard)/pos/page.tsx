@@ -16,6 +16,7 @@ import { CustomerModal } from "@/components/pos/CustomerModal";
 import { CartItems } from "@/components/pos/CartItems";
 import { PrintReceipt } from "@/components/pos/PrintReceipt";
 import ProductGrid from "@/components/pos/ProductGrid";
+import { redirect } from "next/navigation";
 
 export default function PointOnSale() {
     const { cart, addToCart, removeFromCart, updateQty, updatePrice, updateDiscount, calculateSubtotal, calculateTotal, clearCart } = useCart();
@@ -78,22 +79,22 @@ export default function PointOnSale() {
 
         const subtotal = calculateSubtotal();
         const total = calculateTotal();
-        const ppnAmount = (total * ppn) / 100;
-        const grandTotal = total + ppnAmount + biayaLain;
+        const grandTotal = total + biayaLain;
 
         const result = saveInvoice(customerWithMechanics, cart, grandTotal);
-       
+
+
         toast.success("Transaksi berhasil disimpan!", {
             position: 'bottom-left',
         });
 
-        // Set document title untuk nama file saat print
+
+
         const originalTitle = document.title;
         document.title = `Nota_${invoiceNumber.replace(/\//g, '_')}`;
-        
+
         window.print();
-        
-        // Kembalikan title original
+
         document.title = originalTitle;
 
         clearCart();
@@ -102,6 +103,8 @@ export default function PointOnSale() {
         setSearchQuery("");
         setPpn(0);
         setBiayaLain(0);
+
+        window.location.reload();
     };
 
     return (
@@ -151,32 +154,8 @@ export default function PointOnSale() {
                         onSearchChange={setProductSearchQuery}
                         onAddToCart={handleAddToCart}
                     />
-                    
-                    {/* Loading and Error States */}
-                    {(partsLoading || servicesLoading) && (
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                                <p className="text-gray-500">Memuat data...</p>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {(partsError || servicesError) && (
-                        <div className="flex-1 flex items-center justify-center">
-                            <div className="text-center p-4">
-                                <div className="text-red-500 mb-2">
-                                    {partsError || servicesError}
-                                </div>
-                                <button 
-                                    onClick={() => window.location.reload()}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    Refresh
-                                </button>
-                            </div>
-                        </div>
-                    )}
+
+
                 </div>
 
 

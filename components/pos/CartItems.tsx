@@ -330,17 +330,7 @@ export function CartItems({
                             </span>
                         </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                            <span>PPN ({ppn}%)</span>
-                            <input
-                                type="number"
-                                value={ppn || 0}
-                                onChange={(e) => onPpnChange(Number(e.target.value))}
-                                className="w-16 px-2 py-1 border border-gray-300 rounded text-xs text-right"
-                                min="0"
-                                max="100"
-                            />
-                        </div>
+
 
                         <div className="flex items-center justify-between text-sm">
                             <span>Biaya Lain</span>
@@ -353,18 +343,13 @@ export function CartItems({
                             />
                         </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                            <span>PPN Amount</span>
-                            <span className="text-gray-600">
-                                Rp {((total * ppn) / 100).toLocaleString("id-ID")}
-                            </span>
-                        </div>
+
                     </div>
 
                     <div className={`flex items-center justify-between ${isMobile ? "text-base" : "text-lg"} font-bold border-t pt-2`}>
                         <span>Grand Total</span>
                         <span className={`${isMobile ? "text-xl" : "text-2xl"} text-blue-600`}>
-                            Rp {(total + biayaLain + (total * ppn) / 100).toLocaleString("id-ID")}
+                            Rp {(total + biayaLain).toLocaleString("id-ID")}
                         </span>
                     </div>
 
