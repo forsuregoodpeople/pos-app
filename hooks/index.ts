@@ -11,7 +11,8 @@ export { useDataMekanik } from './useDataMekanik';
 // Export types
 export type { CartItem } from './useCart';
 export type { CustomerInfo } from './useCustomer';
-export type { Service, Part } from './useProducts';
+export type { Part } from './useProducts';
+export type { DataJasa as Service } from './useDataJasa';
 export type { Transaction } from './useTransaction';
 export type { DataBarang } from './useDataBarang';
 export type { DataJasa } from './useDataJasa';

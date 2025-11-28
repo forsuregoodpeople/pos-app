@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useCart } from "@/hooks/useCart";
 import { useCustomer } from "@/hooks/useCustomer";
 import { useProducts } from "@/hooks/useProducts";
+import { useDataJasa } from "@/hooks/useDataJasa";
 import { useTransaction } from "@/hooks/useTransaction";
 import { useCustomerHistory } from "@/hooks/useCustomerHistory";
 import { useMechanics } from "@/hooks/useMechanics";
@@ -19,7 +20,8 @@ import ProductGrid from "@/components/pos/ProductGrid";
 export default function PointOnSale() {
     const { cart, addToCart, removeFromCart, updateQty, updatePrice, updateDiscount, calculateSubtotal, calculateTotal, clearCart } = useCart();
     const { customer, updateCustomer, setCustomerFromHistory, clearCustomer } = useCustomer();
-    const { services, parts } = useProducts();
+    const { parts } = useProducts();
+    const { items: services } = useDataJasa();
     const { invoiceNumber, date, saveInvoice } = useTransaction();
     const { mechanics, updateMechanics, clearMechanics } = useMechanics();
 
@@ -66,7 +68,6 @@ export default function PointOnSale() {
             return;
         }
 
-        // Add mechanics to customer data before saving
         const customerWithMechanics = {
             ...customer,
             mekaniks: mechanics.map(m => ({
@@ -80,19 +81,11 @@ export default function PointOnSale() {
         const ppnAmount = (total * 11) / 100;
         const grandTotal = total + ppnAmount + biayaLain;
 
-        console.log('Saving transaction with mechanics:', {
-            customer: customerWithMechanics,
-            mechanics: mechanics,
-            cart: cart,
-            subtotal,
-            ppn: ppnAmount,
-            biayaLain,
-            grandTotal
-        });
-
         const result = saveInvoice(customerWithMechanics, cart, grandTotal);
-        console.log('Transaction saved result:', result);
-        toast.success("Transaksi berhasil disimpan!");
+       
+        toast.success("Transaksi berhasil disimpan!", {
+            position: 'bottom-left',
+        });
 
         window.print();
 

@@ -56,9 +56,9 @@ export default function ProductGrid({
     };
 
     return (
-        <div className="flex-1 flex flex-col w-full">
+        <div className="flex-1 flex flex-col w-full h-full">
             {/* Search Bar */}
-            <div className="relative w-full p-4 pb-3">
+            <div className="relative w-full p-4 pb-3 flex-shrink-0">
                 <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                     type="text"
@@ -69,8 +69,8 @@ export default function ProductGrid({
                 />
             </div>
 
-            <div className="flex-1 flex w-full overflow-y-auto px-3 pb-3">
-                <div className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 w-full auto-rows-max">
+            <div className="flex-1 overflow-y-auto px-3 pb-3 min-h-0">
+                <div className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 w-full auto-rows-max">
                     {isEmpty && (
                         <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
                             <div className="text-lg font-medium">

@@ -18,13 +18,19 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch (error) {
+    return dateString;
+  }
 };
 
 export const TransactionDetailModal = ({ transaction, isOpen, onClose }: TransactionDetailModalProps) => {
@@ -32,7 +38,7 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detail Transaksi</DialogTitle>
         </DialogHeader>
@@ -159,19 +165,19 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
                     </thead>
                     <tbody className="divide-y">
                        {transaction.items.filter(item => item.type === 'service').map((item, index) => (
-                         <tr key={`service-${index}`}>
-                           <td className="px-4 py-3">
-                             <p className="font-medium">{item.name}</p>
-                           </td>
-                           <td className="px-4 py-3 text-center">{item.qty}</td>
-                           <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
-                           <td className="px-4 py-3 text-center">
-                             {(item as any).discount ? `${(item as any).discount}%` : '-'}
-                           </td>
-                           <td className="px-4 py-3 text-right font-medium">
-                             {formatCurrency((item.price * item.qty) * (1 - ((item as any).discount || 0) / 100))}
-                           </td>
-                         </tr>
+                          <tr key={`service-${index}`}>
+                            <td className="px-4 py-3">
+                              <p className="font-medium">{item.name}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center">{item.qty}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
+                            <td className="px-4 py-3 text-center">
+                              {(item as any).discount ? `${(item as any).discount}` : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              {formatCurrency((item.price * item.qty) - ((item as any).discount || 0))}
+                            </td>
+                          </tr>
                        ))}
                     </tbody>
                     <tfoot className="bg-blue-50">
@@ -180,11 +186,11 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
                            Subtotal Jasa:
                          </td>
                          <td className="px-4 py-3 text-right font-bold text-blue-600">
-                           {formatCurrency(
-                             transaction.items
-                               .filter(item => item.type === 'service')
-                               .reduce((sum, item) => sum + ((item.price * item.qty) * (1 - ((item as any).discount || 0) / 100)), 0)
-                           )}
+                            {formatCurrency(
+                              transaction.items
+                                .filter(item => item.type === 'service')
+                                .reduce((sum, item) => sum + ((item.price * item.qty) - ((item as any).discount || 0)), 0)
+                            )}
                          </td>
                        </tr>
                     </tfoot>
@@ -213,19 +219,19 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
                     </thead>
                     <tbody className="divide-y">
                        {transaction.items.filter(item => item.type === 'part').map((item, index) => (
-                         <tr key={`part-${index}`}>
-                           <td className="px-4 py-3">
-                             <p className="font-medium">{item.name}</p>
-                           </td>
-                           <td className="px-4 py-3 text-center">{item.qty}</td>
-                           <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
-                           <td className="px-4 py-3 text-center">
-                             {(item as any).discount ? `${(item as any).discount}%` : '-'}
-                           </td>
-                           <td className="px-4 py-3 text-right font-medium">
-                             {formatCurrency((item.price * item.qty) * (1 - ((item as any).discount || 0) / 100))}
-                           </td>
-                         </tr>
+                          <tr key={`part-${index}`}>
+                            <td className="px-4 py-3">
+                              <p className="font-medium">{item.name}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center">{item.qty}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
+                            <td className="px-4 py-3 text-center">
+                              {(item as any).discount ? `${(item as any).discount}` : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              {formatCurrency((item.price * item.qty) - ((item as any).discount || 0))}
+                            </td>
+                          </tr>
                        ))}
                     </tbody>
                     <tfoot className="bg-green-50">
@@ -234,11 +240,11 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
                            Subtotal Barang:
                          </td>
                          <td className="px-4 py-3 text-right font-bold text-green-600">
-                           {formatCurrency(
-                             transaction.items
-                               .filter(item => item.type === 'part')
-                               .reduce((sum, item) => sum + ((item.price * item.qty) * (1 - ((item as any).discount || 0) / 100)), 0)
-                           )}
+                            {formatCurrency(
+                              transaction.items
+                                .filter(item => item.type === 'part')
+                                .reduce((sum, item) => sum + ((item.price * item.qty) - ((item as any).discount || 0)), 0)
+                            )}
                          </td>
                        </tr>
                     </tfoot>
@@ -251,11 +257,11 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                <div className="flex justify-between items-center text-sm">
                  <span className="text-gray-600">Subtotal:</span>
-                 <span className="font-medium">
-                   {formatCurrency(
-                     transaction.items.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - ((item as any).discount || 0) / 100)), 0)
-                   )}
-                 </span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    transaction.items.reduce((sum, item) => sum + ((item.price * item.qty) - ((item as any).discount || 0)), 0)
+                  )}
+                </span>
                </div>
                <div className="flex justify-between items-center text-sm">
                  <span className="text-gray-600">PPN (11%):</span>

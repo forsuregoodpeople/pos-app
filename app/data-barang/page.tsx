@@ -7,14 +7,11 @@ import { DataTable } from "@/components/shared/DataTable";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function DataBarangPage() {
-    const { items, loading, addItem, updateItem, deleteItem } = useDataBarang();
-    const { syncPartsFromBarang } = useProducts();
-
-    useEffect(() => {
-        syncPartsFromBarang();
-    }, [items]);
+    const { items, loading, updateItem, deleteItem, error } = useDataBarang();
 
     const columns = [
+
+        { key: 'code' as const, label: 'Kode Barang', type: 'text' as const },
         { key: 'name' as const, label: 'Nama Barang', type: 'text' as const },
         { key: 'price' as const, label: 'Harga', type: 'number' as const },
     ];
@@ -30,7 +27,7 @@ export default function DataBarangPage() {
                 <DataTable
                     items={items}
                     loading={loading}
-                    onAdd={(item) => addItem(item)}
+
                     onEdit={(id, item) => updateItem(id, item)}
                     onDelete={(id) => deleteItem(id)}
                     columns={columns}

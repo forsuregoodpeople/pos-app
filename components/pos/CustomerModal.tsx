@@ -46,11 +46,10 @@ export function CustomerModal({
     onSave,
 }: CustomerModalProps) {
     const [showRecap, setShowRecap] = useState(false);
-    
-    // Group items by name and count occurrences
+
     const groupItemsByCustomer = (transactions: Transaction[]) => {
         const itemGroups: { [key: string]: { name: string; type: string; count: number; lastUsed: string } } = {};
-        
+
         transactions.forEach(transaction => {
             transaction.items.forEach(item => {
                 const key = `${item.name}-${item.type}`;
@@ -63,13 +62,12 @@ export function CustomerModal({
                     };
                 }
                 itemGroups[key].count += 1;
-                // Update last used if this transaction is more recent
                 if (new Date(transaction.date) > new Date(itemGroups[key].lastUsed)) {
                     itemGroups[key].lastUsed = transaction.date;
                 }
             });
         });
-        
+
         return Object.values(itemGroups).sort((a, b) => b.count - a.count);
     };
 
@@ -118,7 +116,7 @@ export function CustomerModal({
                                     </button>
                                 </div>
                             </div>
-                            
+
                             {showRecap && (
                                 <div className="p-3 bg-gray-50 border-b">
                                     <div className="text-sm font-semibold mb-2">Rekap Transaksi</div>
@@ -148,7 +146,7 @@ export function CustomerModal({
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="mt-3 space-y-2">
                                         <div className="text-xs font-semibold text-gray-700">Transaksi Terakhir:</div>
                                         {customerHistory
@@ -168,7 +166,7 @@ export function CustomerModal({
                                     </div>
                                 </div>
                             )}
-                            
+
                             <ScrollArea className={`${showRecap ? 'h-32' : 'h-64'} p-3 transition-all duration-200`}>
                                 {customerHistory.map((inv, idx) => (
                                     <button
@@ -245,9 +243,8 @@ export function CustomerModal({
                                     {groupedItems.slice(0, 8).map((item, idx) => (
                                         <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
                                             <div className="flex items-center gap-2">
-                                                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                                    item.type === 'service' ? 'bg-blue-600' : 'bg-green-600'
-                                                }`}>
+                                                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold ${item.type === 'service' ? 'bg-blue-600' : 'bg-green-600'
+                                                    }`}>
                                                     {item.type === 'service' ? 'J' : 'B'}
                                                 </span>
                                                 <div>
@@ -272,6 +269,21 @@ export function CustomerModal({
                     )}
 
                     {/* Customer Form */}
+
+                    <div>
+                        <Label htmlFor="tipe">Tipe Customer</Label>
+
+                        <Select value={customer.tipe || ""} onValueChange={(value) => onCustomerChange("tipe", value)}>
+                            <SelectTrigger className="w-full mt-2">
+                                <SelectValue placeholder="-- Tipe Customer --" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Umum">Umum</SelectItem>
+                                <SelectItem value="Perusahaan">Perusahaan</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-4 border-t pt-4">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                             Atau isi manual
@@ -341,21 +353,6 @@ export function CustomerModal({
                                 />
                             </div>
                         </div>
-
-                        <div>
-                            <Label htmlFor="tipe">Tipe Customer</Label>
- 
-                            <Select value={customer.tipe || ""} onValueChange={(value) => onCustomerChange("tipe", value)}>
-                                <SelectTrigger className="w-full mt-2">
-                                    <SelectValue placeholder="-- Tipe Customer --" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Umum">Umum</SelectItem>
-                                    <SelectItem value="Perusahaan">Perusahaan</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
                     </div>
                     <Button onClick={onSave} className="w-full mt-4">
                         Simpan

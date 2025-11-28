@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Transaction } from "@/hooks/useTransaction";
+import { useTransaction, Transaction } from "@/hooks/useTransaction";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdvancedAIAnalysis } from "@/hooks/useAdvancedAIAnalysis";
 import { useTransactionFilters } from "@/hooks/useTransactionFilters";
 import { TransactionDetailModal } from "@/components/history/TransactionDetailModal";
@@ -13,9 +12,7 @@ import { AdvancedKeyMetrics } from "@/components/history/AdvancedChartComponents
 import { HumanInsightsAnalysis } from "@/components/history/HumanInsightsAnalysis";
 
 export default function HistoryPage() {
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
-    const [loading, setLoading] = useState(true);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
     const [dateFilter, setDateFilter] = useState<string>("all");
@@ -23,20 +20,7 @@ export default function HistoryPage() {
     const [endDate, setEndDate] = useState<string>("");
     const [activeTab, setActiveTab] = useState<string>("overview");
 
-    useEffect(() => {
-        loadTransactions();
-    }, []);
-
-    const loadTransactions = () => {
-        const saved = localStorage.getItem("invoices");
-        if (saved) {
-            const data = JSON.parse(saved);
-            setTransactions(data.sort((a: Transaction, b: Transaction) =>
-                new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()
-            ));
-        }
-        setLoading(false);
-    };
+    const { transactions, loading, error, reload } = useTransaction();
 
     const filteredTransactions = useTransactionFilters(
         transactions,
@@ -53,13 +37,19 @@ export default function HistoryPage() {
 
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString; // Return original string if invalid date
+            }
+            return date.toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return dateString; // Return original string if error
+        }
     };
 
     return (
@@ -99,13 +89,11 @@ export default function HistoryPage() {
                             </Select>
                         </div>
                         
-                        <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-2">
                             <Select value={dateFilter} onValueChange={(value) => {
                                 setDateFilter(value);
-                                if (value !== "all") {
-                                    setStartDate("");
-                                    setEndDate("");
-                                }
+                                setStartDate("");
+                                setEndDate("");
                             }}>
                                 <SelectTrigger className="w-40">
                                     <SelectValue placeholder="Filter Tanggal" />
@@ -116,29 +104,26 @@ export default function HistoryPage() {
                                     <SelectItem value="week">7 Hari Terakhir</SelectItem>
                                     <SelectItem value="month">Bulan Ini</SelectItem>
                                     <SelectItem value="year">Tahun Ini</SelectItem>
-                                    <SelectItem value="custom">Custom Range</SelectItem>
                                 </SelectContent>
                             </Select>
                             
-                            {dateFilter === "custom" && (
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        placeholder="Dari tanggal"
-                                    />
-                                    <span className="text-gray-500">s/d</span>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                        placeholder="Sampai tanggal"
-                                    />
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                    placeholder="Dari tanggal"
+                                />
+                                <span className="text-gray-500">s/d</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                    placeholder="Sampai tanggal"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -215,7 +200,7 @@ export default function HistoryPage() {
                                         <div className="text-xs text-gray-500">
                                             <span>{transaction.items.length} item</span>
                                             <span className="mx-2">•</span>
-                                            <span>{transaction.date}</span>
+                                            <span>{formatDate(transaction.date)}</span>
                                         </div>
                                         <button
                                             onClick={() => {
