@@ -212,7 +212,7 @@ export function CustomerModal({
                                                         </span>
                                                         <span className="truncate">{item.name}</span>
                                                         <span className="text-gray-500 ml-auto">
-                                                            {item.qty}x Rp {item.price.toLocaleString('id-ID')}
+                                                            {item.qty}x Rp {item.price ? item.price.toLocaleString('id-ID') : '0'}
                                                         </span>
                                                     </div>
                                                 ))}

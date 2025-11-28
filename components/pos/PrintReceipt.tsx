@@ -22,7 +22,6 @@ const printStyles = `
     left: 0;
     top: 0;
     width: 100%;
-    height: auto;
     padding: 0;
     margin: 0;
   }
@@ -36,24 +35,23 @@ const printStyles = `
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 297mm; /* Tinggi A4 */
+    min-height: 297mm;
     margin: 0;
-    padding: 10mm;
-    gap: 5mm;
+    padding: 5mm;
+    gap: 3mm;
     page-break-after: always;
     box-sizing: border-box;
   }
   
   .receipt-section {
     width: 100%;
-    height: 50%;
-    min-height: 130mm;
-    overflow: hidden;
+    min-height: 135mm;
     margin: 0;
-    padding: 8px;
+    padding: 6px;
     box-sizing: border-box;
     border: 1px solid #000;
     page-break-inside: avoid;
+    overflow: visible;
   }
   
   .horizontal-cut-line {
@@ -62,7 +60,7 @@ const printStyles = `
   
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 5mm;
   }
 }
 
@@ -93,14 +91,14 @@ const printStyles = `
 @media print {
   .receipt-page-vertical {
     flex-direction: column !important;
-    gap: 5mm !important;
+    gap: 3mm !important;
   }
 }
 
 .receipt-section {
   width: 100%;
   margin: 0;
-  padding: 15px;
+  padding: 12px;
   border: 1px solid #000;
   background: white;
   box-sizing: border-box;
@@ -119,84 +117,95 @@ const printStyles = `
   .receipt-section {
     max-width: none;
     margin: 0;
-    height: 50%;
-    min-height: 130mm;
-    overflow: hidden;
-    font-size: 10px;
+    min-height: 135mm;
+    overflow: visible;
+    font-size: 9px;
     line-height: 1.1;
     width: 100%;
-    padding: 8px;
+    padding: 6px;
     border: 1px solid #000;
   }
   
   .receipt-table {
-    font-size: 9px;
+    font-size: 8px;
   }
   
   .section-title {
-    font-size: 11px;
-  }
-  
-  .receipt-title {
-    font-size: 14px;
-  }
-  
-  .info-grid {
-    font-size: 9px;
-  }
-  
-  .totals-grid {
     font-size: 10px;
   }
   
+  .receipt-title {
+    font-size: 13px;
+  }
+  
+  .info-grid {
+    font-size: 8px;
+  }
+  
+  .totals-grid {
+    font-size: 9px;
+  }
+  
   .total-row.grand-total {
-    font-size: 11px;
+    font-size: 10px;
   }
   
   .receipt-footer {
+    font-size: 7px;
+  }
+  
+  .keterangan-section {
     font-size: 8px;
+    margin: 3px 2px;
+    padding: 3px 4px;
+    min-height: 45px;
   }
 }
 
-/* Sisanya tetap sama dengan penyesuaian ukuran */
-.receipt-header {
-  text-align: center;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #000;
-  padding-bottom: 5px;
+/* Logo Styles */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.logo-image {
+  height: 45px;
+  width: auto;
+}
+
+.logo-text {
+  text-align: left;
+}
+
+.dealership-name {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.dealership-subtitle {
+  font-size: 9px;
+  font-weight: bold;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.logo-section {
-  text-align: left;
-}
-
-.toyota-logo {
-  font-weight: bold;
-  font-size: 14px;
-  margin-bottom: 2px;
-}
-
-.dealership-name {
-  font-weight: bold;
-  font-size: 11px;
+  margin-bottom: 6px;
 }
 
 .header-info {
   text-align: right;
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .receipt-title {
   font-weight: bold;
-  font-size: 16px;
-  margin: 5px 0;
+  font-size: 15px;
+  margin: 4px 0;
   text-align: center;
 }
 
@@ -204,23 +213,23 @@ const printStyles = `
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 10px;
-  margin-top: 3px;
+  font-size: 9px;
+  margin-top: 2px;
 }
 
 .copy-label {
   font-style: italic;
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .info-section {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .section-title {
   font-weight: bold;
-  font-size: 11px;
-  margin-bottom: 3px;
+  font-size: 10px;
+  margin-bottom: 2px;
   border-bottom: 1px solid #000;
   padding-bottom: 1px;
 }
@@ -228,8 +237,8 @@ const printStyles = `
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 3px;
-  font-size: 9px;
+  gap: 2px;
+  font-size: 8px;
 }
 
 .info-item.full-width {
@@ -238,7 +247,7 @@ const printStyles = `
 
 .info-label {
   font-weight: bold;
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
 .info-value {
@@ -246,20 +255,22 @@ const printStyles = `
 }
 
 .table-section {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .receipt-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 9px;
+  font-size: 8px;
+  table-layout: fixed;
 }
 
 .receipt-table th,
 .receipt-table td {
   border: 1px solid #000;
-  padding: 2px 3px;
+  padding: 1px 2px;
   text-align: left;
+  word-wrap: break-word;
 }
 
 .receipt-table th {
@@ -281,53 +292,77 @@ const printStyles = `
 }
 
 .totals-section {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .totals-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .total-row {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .total-row.grand-total {
   font-weight: bold;
-  font-size: 11px;
+  font-size: 10px;
   border-top: 1px solid #000;
-  padding-top: 3px;
+  padding-top: 2px;
 }
 
 .signature-section {
   display: flex;
   justify-content: space-around;
-  margin: 15px 0;
+  margin: 12px 0;
 }
 
 .signature-box {
   text-align: center;
-  width: 100px;
+  width: 90px;
 }
 
 .signature-line {
   border-bottom: 1px solid #000;
-  height: 25px;
-  margin-bottom: 4px;
+  height: 20px;
+  margin-bottom: 3px;
 }
 
 .signature-label {
-  font-size: 9px;
+  font-size: 8px;
 }
 
 .receipt-footer {
-  margin-top: 8px;
+  margin-top: 6px;
   border-top: 1px solid #000;
-  padding-top: 5px;
+  padding-top: 4px;
+  font-size: 7px;
+}
+
+.keterangan-section {
+  margin: 4px 2px;
+  padding: 4px 5px;
+  border: 1px solid #000;
+  font-size: 9px;
+  line-height: 1.2;
+  min-height: 50px;
+  background-color: #f9f9f9;
+}
+
+.keterangan-label {
+  font-weight: bold;
+  margin-bottom: 2px;
+  font-size: 8px;
+}
+
+.keterangan-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 40px;
+  font-family: 'Courier New', monospace;
   font-size: 8px;
 }
 
@@ -341,16 +376,16 @@ const printStyles = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px 0;
+    padding: 8px 0;
     width: 100%;
     border-top: 2px dashed #666;
     border-bottom: 2px dashed #666;
-    margin: 10px 0;
+    margin: 8px 0;
   }
   
   .cut-label {
-    margin-top: 5px;
-    font-size: 11px;
+    margin-top: 4px;
+    font-size: 10px;
     color: #666;
   }
 }
@@ -392,6 +427,7 @@ interface PrintReceiptProps {
   subtotal: number;
   biayaLain: number;
   total: number;
+  keterangan?: string;
 }
 
 interface ReceiptData {
@@ -427,6 +463,7 @@ interface ReceiptData {
   biayaLain: string;
   grandTotal: string;
   garansi?: string;
+  keterangan?: string;
 }
 
 const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) => {
@@ -436,15 +473,24 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
       <div className="receipt-header">
         <div className="header-content">
           <div className="logo-section">
-            <div className="toyota-logo">SUNDA SERVIS</div>
-            <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '1px' }}>Bengkel Authorized</div>
-            <div className="dealership-name">Sunda Service Center</div>
+            <img
+              src="/images/logo.png"
+              alt="Sunda Service Logo"
+              className="logo-image"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+            <div className="logo-text">
+              <div className="dealership-name">SUNDA SERVIS</div>
+            </div>
           </div>
           <div className="header-info">
-            <div style={{ fontSize: '10px' }}>Jln Panjunan No.112</div>
-            <div style={{ fontSize: '10px' }}>Cirebon</div>
-            <div style={{ fontSize: '10px' }}>Telp: (0231) 234997</div>
-            <div style={{ fontSize: '9px', marginTop: '2px' }}>NPWP: 00.000.000.0-000.000</div>
+            <div style={{ fontSize: '9px' }}>Jln Panjunan No.112</div>
+            <div style={{ fontSize: '9px' }}>Cirebon</div>
+            <div style={{ fontSize: '9px' }}>Telp: (0231) 234997</div>
+            <div style={{ fontSize: '8px', marginTop: '1px' }}>NPWP: 00.000.000.0-000.000</div>
           </div>
         </div>
         <div className="receipt-title">NOTA BENGKEL</div>
@@ -475,10 +521,6 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
         <div className="section-title">Data Kendaraan</div>
         <div className="info-grid">
           <div className="info-item">
-            <span className="info-label">No. SPP:</span>
-            <span className="info-value">{data.noSpp}</span>
-          </div>
-          <div className="info-item">
             <span className="info-label">No. Polisi:</span>
             <span className="info-value">{data.noPolisi}</span>
           </div>
@@ -493,30 +535,30 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
         </div>
       </div>
 
-      {/* Service Items */}
+      {/* Service Items - DIATAS Parts */}
       {data.serviceItems.length > 0 && (
         <div className="table-section">
           <div className="section-title">Jenis / Item Pekerjaan</div>
           <table className="receipt-table">
             <thead>
               <tr>
-                <th className="text-center" style={{ width: '20px' }}>No</th>
+                <th className="text-center" style={{ width: '22px' }}>No</th>
                 <th className="text-left">Nama Pekerjaan</th>
-                <th className="text-center" style={{ width: '30px' }}>Qty</th>
-                <th className="text-right" style={{ width: '60px' }}>Harga Satuan</th>
-                <th className="text-right" style={{ width: '35px' }}>Diskon</th>
-                <th className="text-right" style={{ width: '65px' }}>Harga Netto</th>
+                <th className="text-center" style={{ width: '22px' }}>Qty</th>
+                <th className="text-right" style={{ width: '70px' }}>Harga Satuan</th>
+                <th className="text-right" style={{ width: '45px' }}>Diskon</th>
+                <th className="text-right" style={{ width: '70px' }}>Harga Netto</th>
               </tr>
             </thead>
             <tbody>
               {data.serviceItems.map((item, index) => (
                 <tr key={index}>
                   <td className="text-center">{item.no}</td>
-                  <td>{item.nama}</td>
+                  <td style={{ fontSize: '7px' }}>{item.nama}</td>
                   <td className="text-center">{item.qty}</td>
-                  <td className="text-right">{item.harga_satuan}</td>
+                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_satuan}</td>
                   <td className="text-right">{item.diskon}</td>
-                  <td className="text-right">{item.harga_netto}</td>
+                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_netto}</td>
                 </tr>
               ))}
             </tbody>
@@ -530,30 +572,30 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
         </div>
       )}
 
-      {/* Parts */}
+      {/* Parts - DIBAWAH Service Items */}
       {data.parts.length > 0 && (
         <div className="table-section">
           <div className="section-title">Pengadaan Suku Cadang & Material</div>
           <table className="receipt-table">
             <thead>
               <tr>
-                <th className="text-center" style={{ width: '20px' }}>No</th>
+                <th className="text-center" style={{ width: '22px' }}>No</th>
                 <th className="text-left">Nama Suku Cadang</th>
-                <th className="text-center" style={{ width: '30px' }}>Qty</th>
-                <th className="text-right" style={{ width: '60px' }}>Harga Satuan</th>
-                <th className="text-right" style={{ width: '35px' }}>Diskon</th>
-                <th className="text-right" style={{ width: '65px' }}>Harga Netto</th>
+                <th className="text-center" style={{ width: '22px' }}>Qty</th>
+                <th className="text-right" style={{ width: '70px' }}>Harga Satuan</th>
+                <th className="text-right" style={{ width: '45px' }}>Diskon</th>
+                <th className="text-right" style={{ width: '70px' }}>Harga Netto</th>
               </tr>
             </thead>
             <tbody>
               {data.parts.map((item, index) => (
                 <tr key={index}>
                   <td className="text-center">{item.no}</td>
-                  <td>{item.nama}</td>
+                  <td style={{ fontSize: '7px' }}>{item.nama}</td>
                   <td className="text-center">{item.qty}</td>
-                  <td className="text-right">{item.harga_satuan}</td>
+                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_satuan}</td>
                   <td className="text-right">{item.diskon}</td>
-                  <td className="text-right">{item.harga_netto}</td>
+                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_netto}</td>
                 </tr>
               ))}
             </tbody>
@@ -569,7 +611,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
 
       {/* Garansi */}
       {data.garansi && (
-        <div style={{ fontSize: '9px', border: '1px solid #000', padding: '4px', marginBottom: '6px' }}>
+        <div style={{ fontSize: '8px', border: '1px solid #000', padding: '3px', marginBottom: '4px' }}>
           <strong>Garansi Perbaikan:</strong> {data.garansi}
         </div>
       )}
@@ -606,16 +648,25 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
 
       {/* Footer */}
       <div className="receipt-footer">
-        <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '2px' }}>PERHATIAN / ATTENTION:</div>
-        <div style={{ fontSize: '8px', lineHeight: '1.2' }}>
+        <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '1px' }}>PERHATIAN / ATTENTION:</div>
+        <div style={{ fontSize: '7px', lineHeight: '1.1' }}>
           Pembayaran ini sah apabila pada Nota Bengkel ini telah ditanda tangani oleh kasir kami,
           dan tanpa coretan. Perusahaan tidak bertanggung jawab atas uang yang dibayarkan yang
           tidak disertai bukti seperti tersebut diatas.
         </div>
-        <div style={{ fontSize: '8px', marginTop: '4px', lineHeight: '1.2' }}>
-          <strong>Catatan Penting:</strong> Bila masih ada hal-hal yang kurang berkenan dalam perbaikan,
-          serahkan kembali kendaraan Anda sebelum meninggalkan bengkel atau tidak lebih dari 7 hari.
+      </div>
+
+      {/* Keterangan Section - Textarea Besar */}
+      <div className="keterangan-section">
+        <div className="keterangan-label">KETERANGAN:</div>
+        <div className="keterangan-text">
         </div>
+      </div>
+
+      {/* Catatan Penting */}
+      <div style={{ fontSize: '7px', marginTop: '3px', lineHeight: '1.1', padding: '0 2px' }}>
+        <strong>Catatan Penting:</strong> Bila masih ada hal-hal yang kurang berkenan dalam perbaikan,
+        serahkan kembali kendaraan Anda sebelum meninggalkan bengkel atau tidak lebih dari 7 hari.
       </div>
     </div>
   );
@@ -629,6 +680,7 @@ export function PrintReceipt({
   subtotal,
   biayaLain,
   total,
+  keterangan = ''
 }: PrintReceiptProps) {
   const cartServices = items.filter(item => item.type === "service");
   const cartParts = items.filter(item => item.type === "part");
@@ -653,24 +705,25 @@ export function PrintReceipt({
       no: index + 1,
       nama: item.name,
       qty: item.qty.toString(),
-      harga_satuan: `Rp. ${item.price.toLocaleString('id-ID')}`,
+      harga_satuan: `Rp ${item.price.toLocaleString('id-ID')}`,
       diskon: `${item.discount}%`,
-      harga_netto: `Rp. ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
+      harga_netto: `Rp ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
     })),
     parts: cartParts.map((item, index) => ({
       no: index + 1,
       nama: item.name,
       qty: item.qty.toString(),
-      harga_satuan: `Rp. ${item.price.toLocaleString('id-ID')}`,
+      harga_satuan: `Rp ${item.price.toLocaleString('id-ID')}`,
       diskon: `${item.discount}%`,
-      harga_netto: `Rp. ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
+      harga_netto: `Rp ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
     })),
-    subtotalJasa: `Rp. ${cartServices.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
-    subtotalParts: `Rp. ${cartParts.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
-    dpp: `Rp. ${subtotal.toLocaleString('id-ID')}`,
-    biayaLain: `Rp. ${biayaLain.toLocaleString('id-ID')}`,
-    grandTotal: `Rp. ${(total + biayaLain).toLocaleString('id-ID')}`,
-    garansi: 'Garansi 1 bulan untuk suku cadang dan 3 bulan untuk jasa perbaikan'
+    subtotalJasa: `Rp ${cartServices.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
+    subtotalParts: `Rp ${cartParts.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
+    dpp: `Rp ${subtotal.toLocaleString('id-ID')}`,
+    biayaLain: `Rp ${biayaLain.toLocaleString('id-ID')}`,
+    grandTotal: `Rp ${(total + biayaLain).toLocaleString('id-ID')}`,
+    garansi: 'Garansi 1 bulan untuk suku cadang dan 3 bulan untuk jasa perbaikan',
+    keterangan: keterangan
   };
 
   return (
@@ -691,7 +744,7 @@ export function PrintReceipt({
           <div className="horizontal-cut-line">
             <div className="cut-label">GARIS POTONG</div>
           </div>
-          <ReceiptSection data={receiptData} label="UNTUK CUSTOMER" />
+          <ReceiptSection data={receiptData} label="UNTUK PELANGGAN" />
         </div>
       </div>
     </>

@@ -29,7 +29,20 @@ export function useDataJasa() {
             const errorMessage = err instanceof Error ? err.message : "Gagal memuat data jasa.";
             console.error('useDataJasa: Load error:', errorMessage);
             setError(errorMessage);
-            setItems([]);
+            
+            // Set dummy data when API fails
+            const dummyServices: DataJasa[] = [
+                { id: '1', name: 'Ganti Oli Mesin', price: 50000 },
+                { id: '2', name: 'Ganti Filter Oli', price: 25000 },
+                { id: '3', name: 'Ganti Kampas Rem Depan', price: 80000 },
+                { id: '4', name: 'Ganti Kampas Rem Belakang', price: 70000 },
+                { id: '5', name: 'Service AC', price: 100000 },
+                { id: '6', name: 'Balancing & Spooring', price: 150000 },
+                { id: '7', name: 'Ganti Filter AC', price: 40000 },
+                { id: '8', name: 'Cuci Mobil', price: 30000 },
+            ];
+            setItems(dummyServices);
+            console.log('Using dummy services data');
         } finally {
             console.log('useDataJasa: Setting loading to false');
             setLoading(false);

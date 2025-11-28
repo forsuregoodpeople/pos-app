@@ -136,9 +136,6 @@ export function MechanicModal({
                                                 className="w-full px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
                                             >
                                                 <div className="font-medium text-gray-800">{mechanic.name}</div>
-                                                {mechanic.phone && (
-                                                    <div className="text-xs text-gray-500">{mechanic.phone}</div>
-                                                )}
                                             </button>
                                         ))}
                                     {availableMechanics.filter(m => 

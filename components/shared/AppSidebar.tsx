@@ -1,8 +1,10 @@
 "use client";
 
-import { FileText, Clock, Wrench, Package, Users } from "lucide-react";
+import { FileText, Clock, Wrench, Package, Users, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     Sidebar,
     SidebarContent,
@@ -13,6 +15,7 @@ import {
     SidebarMenu,
     SidebarMenuItem,
     SidebarMenuButton,
+    SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -50,6 +53,7 @@ const menuItems = [
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const { logout } = useAuth();
 
     const transaksiMenu = menuItems.filter(item => item.group === "transaksi");
     const masterMenu = menuItems.filter(item => item.group === "master");
@@ -104,6 +108,17 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
+            <SidebarFooter className="border-t border-sidebar-border p-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={logout}
+                    className="w-full justify-start"
+                >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                </Button>
+            </SidebarFooter>
         </Sidebar>
     );
 }

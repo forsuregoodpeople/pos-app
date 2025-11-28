@@ -20,8 +20,8 @@ import ProductGrid from "@/components/pos/ProductGrid";
 export default function PointOnSale() {
     const { cart, addToCart, removeFromCart, updateQty, updatePrice, updateDiscount, calculateSubtotal, calculateTotal, clearCart } = useCart();
     const { customer, updateCustomer, setCustomerFromHistory, clearCustomer } = useCustomer();
-    const { parts } = useProducts();
-    const { items: services } = useDataJasa();
+    const { parts, loading: partsLoading, error: partsError } = useProducts();
+    const { items: services, loading: servicesLoading, error: servicesError } = useDataJasa();
     const { invoiceNumber, date, saveInvoice } = useTransaction();
     const { mechanics, updateMechanics, clearMechanics } = useMechanics();
 
@@ -78,7 +78,7 @@ export default function PointOnSale() {
 
         const subtotal = calculateSubtotal();
         const total = calculateTotal();
-        const ppnAmount = (total * 11) / 100;
+        const ppnAmount = (total * ppn) / 100;
         const grandTotal = total + ppnAmount + biayaLain;
 
         const result = saveInvoice(customerWithMechanics, cart, grandTotal);
@@ -87,13 +87,20 @@ export default function PointOnSale() {
             position: 'bottom-left',
         });
 
+        // Set document title untuk nama file saat print
+        const originalTitle = document.title;
+        document.title = `Nota_${invoiceNumber.replace(/\//g, '_')}`;
+        
         window.print();
+        
+        // Kembalikan title original
+        document.title = originalTitle;
 
         clearCart();
         clearCustomer();
         clearMechanics();
         setSearchQuery("");
-        setPpn(11);
+        setPpn(0);
         setBiayaLain(0);
     };
 
@@ -144,6 +151,32 @@ export default function PointOnSale() {
                         onSearchChange={setProductSearchQuery}
                         onAddToCart={handleAddToCart}
                     />
+                    
+                    {/* Loading and Error States */}
+                    {(partsLoading || servicesLoading) && (
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                <p className="text-gray-500">Memuat data...</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {(partsError || servicesError) && (
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center p-4">
+                                <div className="text-red-500 mb-2">
+                                    {partsError || servicesError}
+                                </div>
+                                <button 
+                                    onClick={() => window.location.reload()}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
 
@@ -155,12 +188,14 @@ export default function PointOnSale() {
                         total={calculateTotal()}
                         subtotal={calculateSubtotal()}
                         biayaLain={biayaLain}
+                        ppn={ppn}
                         mechanics={mechanics}
                         onRemove={removeFromCart}
                         onUpdateQty={updateQty}
                         onUpdatePrice={updatePrice}
                         onUpdateDiscount={updateDiscount}
                         onBiayaLainChange={setBiayaLain}
+                        onPpnChange={setPpn}
                         onCustomerClick={() => setShowCustomerModal(true)}
                         onMechanicClick={() => setShowMechanicModal(true)}
                         onCheckout={handleCheckout}
@@ -199,12 +234,14 @@ export default function PointOnSale() {
                         total={calculateTotal()}
                         subtotal={calculateSubtotal()}
                         biayaLain={biayaLain}
+                        ppn={ppn}
                         mechanics={mechanics}
                         onRemove={removeFromCart}
                         onUpdateQty={updateQty}
                         onUpdatePrice={updatePrice}
                         onUpdateDiscount={updateDiscount}
                         onBiayaLainChange={setBiayaLain}
+                        onPpnChange={setPpn}
                         onCustomerClick={() => setShowCustomerModal(true)}
                         onMechanicClick={() => setShowMechanicModal(true)}
                         onCheckout={handleCheckout}

@@ -1,7 +1,5 @@
-import PointOnSale from "./pos/page";
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <PointOnSale />
-  );
+  redirect('/pos');
 }

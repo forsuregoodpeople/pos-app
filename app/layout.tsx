@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Figtree } from "next/font/google";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/shared/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
 
 const figtree = Figtree({
@@ -24,10 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${figtree.variable} antialiased`}>
-        <SidebarProvider>
-          <AppSidebar />
-          {children}
-        </SidebarProvider>
+        {children}
         <Toaster />
       </body>
     </html>

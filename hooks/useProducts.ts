@@ -24,7 +24,18 @@ export function useProducts() {
             const errorMessage = err?.message || 'Gagal sinkronisasi data dari Server.';
             setError(errorMessage);
             console.error('Sync parts error:', err);
-            throw err;
+            
+            // Set dummy data when API fails
+            const dummyParts: Part[] = [
+                { id: '1', code: 'OIL-001', name: 'Oli Mesin 5W-30', price: 150000 },
+                { id: '2', code: 'FLT-001', name: 'Filter Oli', price: 35000 },
+                { id: '3', code: 'BRK-001', name: 'Kampas Rem Depan', price: 120000 },
+                { id: '4', code: 'BRK-002', name: 'Kampas Rem Belakang', price: 100000 },
+                { id: '5', code: 'AIR-001', name: 'Filter AC', price: 75000 },
+            ];
+            setParts(dummyParts);
+            console.log('Using dummy parts data');
+            return dummyParts;
         } finally {
             setLoading(false);
         }

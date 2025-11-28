@@ -40,7 +40,7 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
         // Try to get Data Transaksi sheet
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
-            range: 'Data Transaksi!A:O',
+            range: 'Data Transaksi!A:M',
         });
 
         console.log('Google Sheets response:', response.data);
@@ -69,53 +69,39 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
         console.log('Row length:', row.length);
 
         try {
-            // Parse items from hidden JSON column (column O)
+            // Parse items from JSON column (column K)
             let items = [];
             try {
-                items = row[13] ? JSON.parse(row[13]) : [];
+                items = row[10] ? JSON.parse(row[10]) : [];
                 console.log('Parsed items:', items);
             } catch (e) {
-                console.log('Failed to parse items JSON from column 13, trying other columns');
-                // Try other columns for items
-                for (let i = 0; i < row.length; i++) {
-                    try {
-                        const parsed = JSON.parse(row[i]);
-                        if (Array.isArray(parsed)) {
-                            items = parsed;
-                            console.log(`Found items in column ${i}:`, items);
-                            break;
-                        }
-                    } catch (e) {
-                        // Continue trying
-                    }
-                }
+                console.log('Failed to parse items JSON from column 10, using empty array');
+                items = [];
             }
 
-            // Parse mekaniks from hidden JSON column (column N)
+            // Ensure items have correct structure with default values
+            items = items.map((item: any) => ({
+                id: item.id || '',
+                type: item.type || 'part',
+                name: item.name || 'Unknown Item',
+                price: Number(item.price) || 0,
+                qty: Number(item.qty) || 1,
+                discount: Number(item.discount) || 0
+            }));
+
+            // Parse mekaniks from JSON column (column J)
             let mekaniks = [];
             try {
-                mekaniks = row[12] ? JSON.parse(row[12]) : [];
+                mekaniks = row[9] ? JSON.parse(row[9]) : [];
             } catch (e) {
-                console.log('Failed to parse mekaniks JSON, using empty array');
+                console.log('Failed to parse mekaniks JSON from column 9, using empty array');
                 mekaniks = [];
             }
 
-            // Find savedAt - try multiple columns
+            // Get savedAt from column M
             let savedAt = new Date().toISOString();
-            for (let i = 0; i < row.length; i++) {
-                const value = row[i];
-                if (value && (value.includes('T') || value.includes('-'))) {
-                    try {
-                        const testDate = new Date(value);
-                        if (!isNaN(testDate.getTime())) {
-                            savedAt = value;
-                            console.log(`Found savedAt in column ${i}:`, value);
-                            break;
-                        }
-                    } catch (e) {
-                        // Continue trying
-                    }
-                }
+            if (row[12]) {
+                savedAt = row[12];
             }
 
             const transaction: Transaction = {
@@ -156,30 +142,28 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
         console.log('Saving transaction:', transaction);
         const { sheets, sheetId } = await getSheetClient();
 
-        // Simple row format for testing
+        // Correct row format matching the expected structure
         const row = [
-            transaction.invoiceNumber,
-            transaction.date,
-            transaction.customer.name,
-            transaction.customer.phone,
-            transaction.customer.kmMasuk,
-            transaction.customer.mobil,
-            transaction.customer.platNomor,
-            transaction.customer.tipe || 'umum',
-            transaction.customer.mekanik || '',
-            '', // mekaniks string
-            '', // items string  
-            transaction.total,
-            transaction.savedAt,
-            JSON.stringify(transaction.customer.mekaniks || []),
-            JSON.stringify(transaction.items)
+            transaction.invoiceNumber,        // A - Invoice Number
+            transaction.date,                 // B - Date
+            transaction.customer.name,        // C - Customer Name
+            transaction.customer.phone,       // D - Phone
+            transaction.customer.kmMasuk,     // E - KM Masuk
+            transaction.customer.mobil,        // F - Mobil
+            transaction.customer.platNomor,   // G - Plat Nomor
+            transaction.customer.tipe || 'umum', // H - Tipe
+            transaction.customer.mekanik || '', // I - Mekanik
+            JSON.stringify(transaction.customer.mekaniks || []), // J - Mekaniks (JSON)
+            JSON.stringify(transaction.items), // K - Items (JSON)
+            transaction.total,                 // L - Total
+            transaction.savedAt               // M - Saved At
         ];
 
         console.log('Row to save:', row);
 
         const response = await sheets.spreadsheets.values.append({
             spreadsheetId: sheetId,
-            range: 'Data Transaksi!A:O',
+            range: 'Data Transaksi!A:M',
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [row]
@@ -206,7 +190,7 @@ export async function deleteTransactionAction(invoiceNumber: string) {
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
-            range: 'Data Transaksi!A:O',
+            range: 'Data Transaksi!A:M',
         });
 
         const rows = response.data.values || [];
