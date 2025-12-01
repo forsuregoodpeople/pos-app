@@ -15,6 +15,7 @@ export interface Transaction {
     items: CartItem[];
     total: number;
     savedAt: string;
+    keterangan?: string;
 }
 
 export function useTransaction() {
@@ -23,7 +24,7 @@ export function useTransaction() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const rand : number = Math.floor((Math.random() * 1000) + 1);
+    const [isClient, setIsClient] = useState(false);
 
     const loadTransactions = useCallback(async () => {
         setLoading(true);
@@ -41,21 +42,31 @@ export function useTransaction() {
     }, []);
 
     useEffect(() => {
-        const date = new Date();
-        const newInvoiceNumber = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${String(rand).padStart(3, '0')}`;
-        setInvoiceNumber(newInvoiceNumber);
-        
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (isClient) {
+            const date = new Date();
+            const rand = Math.floor((Math.random() * 1000) + 1);
+            const newInvoiceNumber = `INV-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${String(rand).padStart(3, '0')}`;
+            setInvoiceNumber(newInvoiceNumber);
+        }
+    }, [isClient]);
+
+    useEffect(() => {
         loadTransactions();
     }, [loadTransactions]);
 
-    const saveInvoice = async (customer: CustomerInfo, items: CartItem[], total: number) => {
+    const saveInvoice = async (customer: CustomerInfo, items: CartItem[], total: number, keterangan?: string) => {
         const invoiceData: Transaction = {
             invoiceNumber,
             date,
             customer,
             items,
             total,
-            savedAt: new Date().toISOString()
+            savedAt: new Date().toISOString(),
+            keterangan
         };
 
         try {

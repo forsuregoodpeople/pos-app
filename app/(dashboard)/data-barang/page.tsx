@@ -14,6 +14,11 @@ export default function DataBarangPage() {
     const { items, loading, updateItem, deleteItem, error } = useDataBarang();
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('all');
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const columns = [
         { key: 'code' as const, label: 'Kode Barang', type: 'text' as const, editable: false },
@@ -113,6 +118,7 @@ export default function DataBarangPage() {
                                 />
                             </div>
                         </div>
+                        {isClient && (
                         <div className="w-full sm:w-48">
                             <Select value={stockFilter} onValueChange={setStockFilter}>
                                 <SelectTrigger>
@@ -125,6 +131,7 @@ export default function DataBarangPage() {
                         </SelectContent>
                             </Select>
                         </div>
+                        )}
                         <Button onClick={handlePrint} className="whitespace-nowrap">
                             <Printer className="w-4 h-4 mr-2" />
                             Cetak

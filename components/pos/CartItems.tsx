@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { ShoppingCart, Trash2, User, Printer, Wrench, Edit2, Check, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ShoppingCart, Trash2, User, Printer, Wrench, Edit2 } from "lucide-react";
 import { CartItem } from "@/hooks/useCart";
 import { CustomerInfo } from "@/hooks/useCustomer";
+import { PriceEditModal } from "./PriceEditModal";
 
 interface CartItemsProps {
     cart: CartItem[];
@@ -13,10 +14,9 @@ interface CartItemsProps {
     subtotal: number;
     biayaLain: number;
     ppn: number;
-    mechanics: { id: string; name: string; percentage: number }[];
+    mechanics: any[];
     onRemove: (id: string) => void;
     onUpdateQty: (id: string, qty: number) => void;
-    maxStocks?: { [key: string]: number };
     onUpdatePrice: (id: string, price: number) => void;
     onUpdateDiscount: (id: string, discount: number) => void;
     onBiayaLainChange: (biayaLain: number) => void;
@@ -51,9 +51,21 @@ export function CartItems({
 }: CartItemsProps) {
     const cartServices = cart.filter(item => item.type === "service");
     const cartParts = cart.filter(item => item.type === "part");
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingPrice, setEditingPrice] = useState<number>(0);
-    const [editingDiscount, setEditingDiscount] = useState<number>(0);
+    const [priceEditModalOpen, setPriceEditModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+
+    // Force re-render when cart changes
+    useEffect(() => {
+        console.log('Cart updated:', cart);
+    }, [cart]);
+
+    const handleSavePrice = (itemId: string, newPrice: number, newDiscount: number) => {
+        console.log('handleSavePrice called:', { itemId, newPrice, newDiscount });
+        onUpdatePrice(itemId, newPrice);
+        onUpdateDiscount(itemId, newDiscount);
+        setPriceEditModalOpen(false);
+        setEditingItem(null);
+    };
 
     const QtyButton = ({
         onClick,
@@ -84,22 +96,9 @@ export function CartItems({
         const textColor = isBlueBorder ? "text-blue-600" : "text-green-600";
         const qtyBorderColor = isBlueBorder ? "border-blue-300" : "border-green-300";
 
-        const handleStartEdit = () => {
-            setEditingId(item.id);
-            setEditingPrice(item.price);
-            setEditingDiscount(item.discount);
-        };
-
-        const handleSavePrice = () => {
-            if (editingPrice > 0) {
-                onUpdatePrice(item.id, editingPrice);
-                onUpdateDiscount(item.id, editingDiscount);
-                setEditingId(null);
-            }
-        };
-
-        const handleQuickDiscount = (discountAmount: number) => {
-            setEditingDiscount(discountAmount);
+        const handleEditPrice = () => {
+            setEditingItem(item);
+            setPriceEditModalOpen(true);
         };
 
         return (
@@ -109,78 +108,20 @@ export function CartItems({
                         <div className="text-sm font-semibold text-gray-800">
                             {item.name}
                         </div>
-                        {editingId === item.id ? (
-                            <div className="space-y-1 mt-1">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        value={editingPrice}
-                                        onChange={(e) => setEditingPrice(Number(e.target.value))}
-                                        className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Harga baru"
-                                        autoFocus
-                                    />
-                                    <button
-                                        onClick={handleSavePrice}
-                                        className={`p-1 rounded ${isBlueBorder ? "text-green-600 hover:bg-green-100" : "text-green-600 hover:bg-green-100"}`}
-                                    >
-                                        <Check className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setEditingId(null)}
-                                        className="p-1 rounded text-red-600 hover:bg-red-100"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
+                        <div className="mt-1">
+                            <button
+                                onClick={handleEditPrice}
+                                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                            >
+                                Rp {item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                <Edit2 className="w-4 h-4" />
+                            </button>
+                            {item.discount > 0 && (
+                                <div className="text-xs text-green-600 font-medium">
+                                    Diskon: Rp {item.discount.toLocaleString('id-ID')}
                                 </div>
-                                 <div className="flex items-center gap-2">
-                                     <span className="text-xs text-gray-500">Diskon (Rp):</span>
-                                     <input
-                                         type="number"
-                                         value={editingDiscount}
-                                         onChange={(e) => setEditingDiscount(Number(e.target.value))}
-                                         className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                         placeholder="0"
-                                         min="0"
-                                     />
-                                     <div className="flex gap-1">
-                                         <button
-                                             onClick={() => handleQuickDiscount(0)}
-                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                         >
-                                             0
-                                         </button>
-                                         <button
-                                             onClick={() => handleQuickDiscount(5000)}
-                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                         >
-                                             5K
-                                         </button>
-                                         <button
-                                             onClick={() => handleQuickDiscount(10000)}
-                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                         >
-                                             10K
-                                         </button>
-                                     </div>
-                                 </div>
-                            </div>
-                        ) : (
-                            <div className="mt-1">
-                                <button
-                                    onClick={handleStartEdit}
-                                    className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                                >
-                                    Rp {item.price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                    <Edit2 className="w-3 h-3" />
-                                </button>
-                                {item.discount > 0 && (
-                                    <div className="text-xs text-green-600 font-medium">
-                                        Diskon: Rp {item.discount.toLocaleString('id-ID')}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                     <button
                         onClick={() => onRemove(item.id)}
@@ -221,15 +162,8 @@ export function CartItems({
                             borderColor={qtyBorderColor}
                         />
                     </div>
-                    <div className="text-right">
-                         <div className={`font-bold ${textColor}`}>
-                             Rp {((item.price * item.qty) - item.discount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                         </div>
-                         {item.discount > 0 && (
-                             <div className="text-xs text-gray-500 line-through">
-                                 Rp {(item.price * item.qty).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                             </div>
-                         )}
+                    <div className={`font-bold ${textColor}`}>
+                        Rp {((item.price * item.qty) - item.discount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </div>
                 </div>
             </div>
@@ -238,15 +172,16 @@ export function CartItems({
 
     return (
         <>
-            <div className={`${isMobile ? "h-full" : "h-full"} flex flex-col`}>
-
+            <div className={`h-full flex flex-col ${isMobile ? "fixed inset-0 bg-white z-50" : ""}`}>
                 {/* Header */}
                 <div className="bg-linear-to-r from-blue-600 to-blue-700 p-4 shrink-0">
                     <div className="flex items-center justify-between text-white">
                         <div className="flex items-center gap-3">
                             <div>
                                 <div className="text-xs opacity-90">No. Transaksi</div>
-                                <div className="font-mono font-bold text-sm">{invoiceNumber}</div>
+                                <div className="font-mono font-bold text-sm">
+                                    {invoiceNumber}
+                                </div>
                             </div>
                         </div>
                         <ShoppingCart className="w-6 h-6" />
@@ -261,20 +196,14 @@ export function CartItems({
                     >
                         <User className="w-4 h-4 text-blue-600" />
                         <div className="flex-1 text-left">
-                            {customer.name || customer.tipe ? (
-                                <>
-                                    <div className="font-medium text-gray-800">{customer.name}</div>
-                                    <div className="font-medium text-gray-800">{customer.tipe}</div>
-                                </>
-                            ) : (
-                                <div className="text-gray-500">Klik untuk isi data pelanggan</div>
-                            )}
-                            {customer.platNomor && (
-                                <div className="text-xs text-gray-500">
-                                    {customer.platNomor} • {customer.phone}
-                                </div>
+                            <div className="font-medium text-gray-800">
+                                {customer.name || "Pelanggan"}
+                            </div>
+                            {customer.phone && (
+                                <div className="text-xs text-gray-600">{customer.phone}</div>
                             )}
                         </div>
+                        <Edit2 className="w-4 h-4 text-gray-400" />
                     </button>
                 </div>
 
@@ -286,28 +215,28 @@ export function CartItems({
                     >
                         <Wrench className="w-4 h-4 text-green-600" />
                         <div className="flex-1 text-left">
-                            {mechanics.length > 0 ? (
-                                <div>
-                                    <div className="font-medium text-gray-800">
-                                        {mechanics.map(m => m.name).join(", ")}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                        {mechanics.reduce((t, m) => t + m.percentage, 0)}% total
-                                    </div>
+                            <div className="font-medium text-gray-800">
+                                {mechanics.length > 0 
+                                    ? `${mechanics.length} Mekanik` 
+                                    : "Tambah Mekanik"
+                                }
+                            </div>
+                            {mechanics.length > 0 && (
+                                <div className="text-xs text-gray-600">
+                                    {mechanics.map(m => m.name).join(", ")}
                                 </div>
-                            ) : (
-                                <div className="text-gray-500">Klik untuk tambah mekanik</div>
                             )}
                         </div>
+                        <Edit2 className="w-4 h-4 text-gray-400" />
                     </button>
                 </div>
 
-                {/* Items */}
+                {/* Cart Items */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-3">
                     {cart.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                            <ShoppingCart className="w-16 h-16 mb-2 opacity-20" />
-                            <p className="text-sm">Keranjang masih kosong</p>
+                        <div className="text-center py-8 text-gray-400">
+                            <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                            <div className="text-sm">Keranjang kosong</div>
                         </div>
                     ) : (
                         <>
@@ -343,34 +272,26 @@ export function CartItems({
                 {/* Total & Checkout */}
                 <div className="border-t bg-white p-4 space-y-3 shrink-0">
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span>Subtotal</span>
+                        <div className="flex justify-between text-sm">
+                            <span>Subtotal:</span>
                             <span>
-                                Rp {subtotal.toLocaleString("id-ID")}
+                                Rp {subtotal.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                         </div>
-
-
-
-                        <div className="flex items-center justify-between text-sm">
-                            <span>Biaya Lain</span>
-                            <input
-                                type="number"
-                                value={biayaLain || 0}
-                                onChange={(e) => onBiayaLainChange(Number(e.target.value))}
-                                className="w-24 px-2 py-1 border border-gray-300 rounded text-xs text-right"
-                                placeholder="0"
-                            />
+                        {biayaLain > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span>Biaya Lain:</span>
+                                <span>
+                                    Rp {biayaLain.toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </span>
+                            </div>
+                        )}
+                        <div className="flex justify-between font-bold text-lg">
+                            <span>Total:</span>
+                            <span className="font-bold text-blue-600">
+                                Rp {(total + biayaLain).toLocaleString("id-ID")}
+                            </span>
                         </div>
-
-
-                    </div>
-
-                    <div className={`flex items-center justify-between ${isMobile ? "text-base" : "text-lg"} font-bold border-t pt-2`}>
-                        <span>Grand Total</span>
-                        <span className={`${isMobile ? "text-xl" : "text-2xl"} text-blue-600`}>
-                            Rp {(total + biayaLain).toLocaleString("id-ID")}
-                        </span>
                     </div>
 
                     <button
@@ -383,7 +304,16 @@ export function CartItems({
                     </button>
                 </div>
             </div>
+
+            <PriceEditModal
+                isOpen={priceEditModalOpen}
+                item={editingItem}
+                onClose={() => {
+                    setPriceEditModalOpen(false);
+                    setEditingItem(null);
+                }}
+                onSave={handleSavePrice}
+            />
         </>
     );
-
 }

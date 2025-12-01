@@ -1,6 +1,6 @@
 'use server'
 
-import { google } from 'googleapis';
+import { google, Auth } from 'googleapis';
 import { GoogleAuth } from '../google/googleAuthService';
 import { Part } from '@/hooks/useProducts';
 import { CartItem } from '@/hooks';
@@ -12,7 +12,7 @@ const getSheetClient = async () => {
         throw new Error('SHEET_BARANG environment variable is not set');
     }
     const { auth, sheetId } = await GoogleAuth(sheetBarang);
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: 'v4', auth: auth as any });
     return { sheets, sheetId };
 };
 
@@ -79,11 +79,17 @@ export async function updateStockAction(items: CartItem[]): Promise<{ success: b
         const { sheets, sheetId } = await getSheetClient();
 
         for (const item of items) {
+            // Only update stock for parts, not services
+            if (item.type !== 'part') {
+                continue;
+            }
+
             const { id, qty } = item;
 
             const rowIndex : any = await findRowIndexByCode(sheets, sheetId, id);
             if (!rowIndex) {
-                throw new Error(`Barang dengan code ${id} tidak ditemukan di Data Barang.`);
+                console.warn(`Barang dengan code ${id} tidak ditemukan di Data Barang. Melewati update stok.`);
+                continue;
             }
 
             await sheets.spreadsheets.values.update({

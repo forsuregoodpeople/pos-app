@@ -65,8 +65,12 @@ export default function ProductGrid({
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const filteredPartsWithStock = filteredParts.filter((p) =>
+        (p.quantity || 0) > 0
+    );
+
     const displayItems =
-        (activeTab === "services" ? filteredServices : filteredParts);
+        (activeTab === "services" ? filteredServices : filteredPartsWithStock);
     const isEmpty = displayItems.length === 0;
 
     const formatCurrency = (price: number) => {
@@ -97,54 +101,67 @@ export default function ProductGrid({
                     {isEmpty && (
                         <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
                             <div className="text-lg font-medium">
-                                {searchQuery ? "Tidak ada hasil" : "Belum ada data"}
+                                {searchQuery
+                                    ? "Tidak ada hasil"
+                                    : activeTab === "services"
+                                        ? "Belum ada data jasa"
+                                        : filteredParts.length > 0 && filteredPartsWithStock.length === 0
+                                            ? "Semua barang habis"
+                                            : "Belum ada data barang"
+                                }
                             </div>
                             {!searchQuery && (
                                 <div className="text-sm mt-1">
-                                    Tambahkan di menu Data{" "}
-                                    {activeTab === "services" ? "Jasa" : "Barang"}
+                                    {activeTab === "services"
+                                        ? "Tambahkan di menu Data Jasa"
+                                        : filteredParts.length > 0 && filteredPartsWithStock.length === 0
+                                            ? "Stok barang kosong, silakan tambah stok terlebih dahulu"
+                                            : "Tambahkan di menu Data Barang"
+                                    }
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {displayItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => {
-                                if (activeTab === "parts" && tempStock[item.id] === 0) {
-                                    return;
-                                }
-                                onAddToCart(item, activeTab === "services" ? "service" : "part");
-                            }}
-                            className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all text-left flex flex-col justify-between h-fit border-2 border-transparent ${
-                                activeTab === "services"
-                                    ? "hover:border-blue-500"
-                                    : tempStock[item.id] === 0
-                                    ? "opacity-50 cursor-not-allowed hover:border-gray-300"
-                                    : "hover:border-green-500"
-                            }`}
-                            disabled={activeTab === "parts" && tempStock[item.id] === 0}
-                        >
-                            <div className="font-medium text-sm text-gray-800 mb-1.5 line-clamp-2 min-h-[2.5rem]">
-                                {item.name}
-                            </div>
-                            <div className={`${activeTab === "services" ? "text-blue-600" : "text-green-600"} font-semibold text-sm`}>
-                                {formatCurrency(item.price)}
-                            </div>
-                            {activeTab === "parts" && "quantity" in item && (
-                                <div className={`text-xs mt-1 ${
-                                    tempStock[item.id] === 0 
-                                        ? "text-red-500 font-medium" 
-                                        : tempStock[item.id] <= 5 
-                                        ? "text-orange-600" 
-                                        : "text-gray-500"
-                                }`}>
-                                    Stok: {tempStock[item.id] || 0}
+                    {displayItems.map((item) => {
+                        const isPart = activeTab === "parts";
+                        const isService = activeTab === "services";
+                        
+                        const stock: number = isPart ? Number((item as any).quantity ?? 0) : 0;
+                        const lowStock = isPart && stock <= 5;
+
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onAddToCart(item, isService ? "service" : "part")}
+                                className={[
+                                    "bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all",
+                                    "text-left flex flex-col justify-between h-fit border-2 border-transparent",
+                                    isService ? "hover:border-blue-500" : "hover:border-green-500"
+                                ].join(" ")}
+                            >
+                                <div className="font-medium text-sm text-gray-800 mb-1.5 line-clamp-2 min-h-[2.5rem]">
+                                    {item.name}
                                 </div>
-                            )}
-                        </button>
-                    ))}
+
+                                <div className={(isService ? "text-blue-600" : "text-green-600") + " font-semibold text-sm"}>
+                                    {formatCurrency(item.price)}
+                                </div>
+
+                            {isPart && (
+                                <div
+                                    className={[
+                                            "text-xs mt-1",
+                                            lowStock ? "text-orange-600 font-medium" : "text-gray-500"
+                                        ].join(" ")}
+                                    >
+                                    Stok: {stock}
+                                </div>
+                                )}
+                            </button>
+                        );
+                    })}
+
                 </div>
             </div>
         </div>

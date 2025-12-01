@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
     Select,
     SelectContent,
@@ -48,30 +49,51 @@ export function CustomerModal({
     const [showRecap, setShowRecap] = useState(false);
 
     const groupItemsByCustomer = (transactions: Transaction[]) => {
-        const itemGroups: { [key: string]: { name: string; type: string; count: number; lastUsed: string } } = {};
+        const groups: Record<
+            string,
+            { name: string; type: string; count: number; lastUsed: string }
+        > = {};
 
-        transactions.forEach(transaction => {
-            transaction.items.forEach(item => {
-                const key = `${item.name}-${item.type}`;
-                if (!itemGroups[key]) {
-                    itemGroups[key] = {
-                        name: item.name,
-                        type: item.type,
+        transactions.forEach((tx) => {
+            tx.items.forEach((it) => {
+                const id = `${it.name}-${it.type}`;
+                if (!groups[id]) {
+                    groups[id] = {
+                        name: it.name,
+                        type: it.type,
                         count: 0,
-                        lastUsed: transaction.date
+                        lastUsed: tx.date,
                     };
                 }
-                itemGroups[key].count += 1;
-                if (new Date(transaction.date) > new Date(itemGroups[key].lastUsed)) {
-                    itemGroups[key].lastUsed = transaction.date;
+                groups[id].count++;
+                if (new Date(tx.date) > new Date(groups[id].lastUsed)) {
+                    groups[id].lastUsed = tx.date;
                 }
             });
         });
 
-        return Object.values(itemGroups).sort((a, b) => b.count - a.count);
+        return Object.values(groups).sort((a, b) => b.count - a.count);
     };
 
-    const groupedItems = searchQuery.trim() ? groupItemsByCustomer(customerHistory) : [];
+    // Filter history berdasarkan searchQuery
+    const filteredHistory = customerHistory.filter((inv) => {
+        if (!searchQuery.trim()) return true;
+
+        const query = searchQuery.toLowerCase().trim();
+        const customerName = (inv.customer?.name || '').toLowerCase();
+        const platNomor = (inv.customer?.platNomor || '').toLowerCase();
+        const phone = (inv.customer?.phone || '').toLowerCase();
+        const mobil = (inv.customer?.mobil || '').toLowerCase();
+
+        return customerName.includes(query) ||
+            platNomor.includes(query) ||
+            phone.includes(query) ||
+            mobil.includes(query);
+    });
+
+    const groupedItems = searchQuery.trim()
+        ? groupItemsByCustomer(filteredHistory)
+        : [];
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -79,149 +101,152 @@ export function CustomerModal({
                 <DialogHeader>
                     <DialogTitle>Data Pelanggan</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                    {/* Search Bar */}
-                    <div>
-                        <Label htmlFor="search-customer">Cari Nama atau Plat Nomor</Label>
-                        <div className="relative mt-2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+                <div className="space-y-6">
+                    {/* Search */}
+                    <div className="space-y-2">
+                        <Label>Cari Nama atau Plat Nomor</Label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
-                                id="search-customer"
-                                type="text"
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
                                 placeholder="Ketik nama atau plat nomor..."
                                 className="pl-10"
                             />
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                            History pelanggan akan muncul otomatis saat Anda mengetik
+                        <p className="text-xs text-muted-foreground">
+                            History pelanggan muncul otomatis saat mengetik.
                         </p>
                     </div>
 
-                    {/* History Results */}
-                    {customerHistory.length > 0 && (
-                        <div className="border rounded-lg">
-                            <div className="p-3 border-b">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm font-semibold">
-                                        <History className="w-4 h-4" />
-                                        <span>History Ditemukan ({customerHistory.length} transaksi)</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowRecap(!showRecap)}
-                                        className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition-colors"
-                                    >
-                                        {showRecap ? 'Sembunyikan' : 'Lihat'} Rekap
-                                    </button>
+                    {/* History Section */}
+                    {filteredHistory.length > 0 && (
+                        <div className="border rounded-md">
+                            <div className="p-3 border-b flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm font-semibold">
+                                    <History className="w-4 h-4" />
+                                    History ({filteredHistory.length} transaksi)
                                 </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowRecap(!showRecap)}
+                                >
+                                    {showRecap ? "Tutup" : "Rekap"}
+                                </Button>
                             </div>
 
+                            {/* Recap */}
                             {showRecap && (
-                                <div className="p-3 bg-gray-50 border-b">
-                                    <div className="text-sm font-semibold mb-2">Rekap Transaksi</div>
-                                    <div className="grid grid-cols-2 gap-3 text-xs">
-                                        <div className="bg-white p-2 rounded border">
-                                            <div className="text-gray-500">Total Transaksi</div>
-                                            <div className="font-bold text-lg text-blue-600">
-                                                {customerHistory.length}
-                                            </div>
-                                        </div>
-                                        <div className="bg-white p-2 rounded border">
-                                            <div className="text-gray-500">Total Nilai</div>
-                                            <div className="font-bold text-lg text-green-600">
-                                                Rp {customerHistory.reduce((sum, inv) => sum + inv.total, 0).toLocaleString('id-ID')}
-                                            </div>
-                                        </div>
-                                        <div className="bg-white p-2 rounded border">
-                                            <div className="text-gray-500">Rata-rata</div>
-                                            <div className="font-bold text-lg text-orange-600">
-                                                Rp {Math.round(customerHistory.reduce((sum, inv) => sum + inv.total, 0) / customerHistory.length).toLocaleString('id-ID')}
-                                            </div>
-                                        </div>
-                                        <div className="bg-white p-2 rounded border">
-                                            <div className="text-gray-500">Total Item</div>
-                                            <div className="font-bold text-lg text-purple-600">
-                                                {customerHistory.reduce((sum, inv) => sum + inv.items.length, 0)}
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="p-3 border-b bg-muted/40 space-y-3">
+                                    <div className="text-sm font-semibold">Rekap Transaksi</div>
 
-                                    <div className="mt-3 space-y-2">
-                                        <div className="text-xs font-semibold text-gray-700">Transaksi Terakhir:</div>
-                                        {customerHistory
-                                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                            .slice(0, 3)
-                                            .map((inv, idx) => (
-                                                <div key={idx} className="flex items-center justify-between text-xs bg-white p-2 rounded border">
-                                                    <div>
-                                                        <div className="font-medium">{new Date(inv.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                                        <div className="text-gray-500">{inv.items.length} item</div>
-                                                    </div>
-                                                    <div className="font-semibold text-blue-600">
-                                                        Rp {inv.total.toLocaleString('id-ID')}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                    <div className="grid grid-cols-2 gap-3 text-xs">
+                                        <div className="p-2 bg-white rounded border">
+                                            <div className="text-muted-foreground">Total Transaksi</div>
+                                            <div className="font-bold text-blue-600 text-lg">
+                                                {filteredHistory.length}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-2 bg-white rounded border">
+                                            <div className="text-muted-foreground">Total Nilai</div>
+                                            <div className="font-bold text-green-600 text-lg">
+                                                Rp{" "}
+                                                {filteredHistory
+                                                    .reduce((s, t) => s + t.total, 0)
+                                                    .toLocaleString("id-ID")}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-2 bg-white rounded border">
+                                            <div className="text-muted-foreground">Rata-rata</div>
+                                            <div className="font-bold text-orange-600 text-lg">
+                                                Rp{" "}
+                                                {Math.round(
+                                                    filteredHistory.reduce((s, t) => s + t.total, 0) /
+                                                    (filteredHistory.length || 1)
+                                                ).toLocaleString("id-ID")}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-2 bg-white rounded border">
+                                            <div className="text-muted-foreground">Total Item</div>
+                                            <div className="font-bold text-purple-600 text-lg">
+                                                {filteredHistory.reduce(
+                                                    (s, t) => s + t.items.length,
+                                                    0
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            <ScrollArea className={`${showRecap ? 'h-32' : 'h-64'} p-3 transition-all duration-200`}>
-                                {customerHistory.map((inv, idx) => (
+                            {/* Scrollable History */}
+                            <ScrollArea
+                                className={`${showRecap ? "h-32" : "h-64"} p-3 space-y-2`}
+                            >
+                                {filteredHistory.map((inv, i) => (
                                     <button
-                                        key={idx}
+                                        key={i}
                                         onClick={() => onSelectHistory(inv.customer)}
-                                        className="w-full rounded p-3 text-xs border hover:border-blue-400 hover:bg-blue-50 transition-all text-left mb-2 last:mb-0"
+                                        className="w-full text-left border rounded-md p-3 text-xs hover:bg-blue-50 hover:border-blue-400 transition"
                                     >
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex-1">
-                                                <div className="font-semibold text-gray-800 text-sm">{inv.customer.name}</div>
-                                                <div className="text-gray-600 mt-1 flex items-center gap-1">
+                                        <div className="flex justify-between">
+                                            <div>
+                                                <div className="font-semibold">{inv.customer.name}</div>
+                                                <div className="flex items-center gap-1 text-muted-foreground mt-1">
                                                     <Car className="w-3 h-3" />
                                                     {inv.customer.mobil} • {inv.customer.platNomor}
                                                 </div>
+
                                                 {inv.customer.phone && (
-                                                    <div className="text-gray-600 mt-1 flex items-center gap-1">
+                                                    <div className="flex items-center gap-1 text-muted-foreground mt-1">
                                                         <Phone className="w-3 h-3" />
                                                         {inv.customer.phone}
                                                     </div>
                                                 )}
-                                                {inv.customer.tipe && (
-                                                    <div className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                                        {inv.customer.tipe}
-                                                    </div>
-                                                )}
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-xs text-gray-500">
-                                                    {new Date(inv.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                                                </div>
+
+                                            <div className="text-right text-muted-foreground">
+                                                {new Date(inv.date).toLocaleDateString("id-ID", {
+                                                    day: "numeric",
+                                                    month: "short",
+                                                })}
                                             </div>
                                         </div>
-                                        <div className="mt-2 pt-2 border-t">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="text-gray-600">{inv.items.length} item</span>
-                                                <span className="font-semibold text-blue-600">Rp {inv.total.toLocaleString('id-ID')}</span>
+
+                                        <div className="border-t pt-2 mt-2">
+                                            <div className="flex justify-between mb-1">
+                                                <span>{inv.items.length} item</span>
+                                                <span className="font-semibold text-blue-600">
+                                                    Rp {inv.total.toLocaleString("id-ID")}
+                                                </span>
                                             </div>
-                                            <div className="space-y-1">
-                                                {inv.items.slice(0, 3).map((item, itemIdx) => (
-                                                    <div key={itemIdx} className="text-xs text-gray-600 flex items-center gap-1">
-                                                        <span className={item.type === 'service' ? 'text-blue-600' : 'text-green-600'}>
-                                                            {item.type === 'service' ? 'J' : 'B'}
-                                                        </span>
-                                                        <span className="truncate">{item.name}</span>
-                                                        <span className="text-gray-500 ml-auto">
-                                                            {item.qty}x Rp {item.price ? item.price.toLocaleString('id-ID') : '0'}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                                {inv.items.length > 3 && (
-                                                    <div className="text-xs text-gray-500 italic">
-                                                        ... dan {inv.items.length - 3} item lainnya
-                                                    </div>
-                                                )}
-                                            </div>
+
+                                            {inv.items.slice(0, 3).map((it, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-center gap-2 text-muted-foreground"
+                                                >
+                                                    <span
+                                                        className={
+                                                            it.type === "service"
+                                                                ? "text-blue-600"
+                                                                : "text-green-600"
+                                                        }
+                                                    >
+                                                        {it.type === "service" ? "J" : "B"}
+                                                    </span>
+                                                    <span className="truncate">{it.name}</span>
+                                                    <span className="ml-auto">
+                                                        {it.qty}x Rp{" "}
+                                                        {it.price.toLocaleString("id-ID")}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </button>
                                 ))}
@@ -229,148 +254,135 @@ export function CustomerModal({
                         </div>
                     )}
 
-                    {/* Grouped Items Summary */}
+                    {/* No History */}
+                    {searchQuery.trim() && filteredHistory.length === 0 && (
+                        <div className="border rounded-md p-6 text-center text-sm text-muted-foreground">
+                            <History className="w-10 h-10 mx-auto opacity-20 mb-2" />
+                            Tidak ada history untuk "{searchQuery}"
+                        </div>
+                    )}
+
+                    {/* Grouped Items */}
                     {groupedItems.length > 0 && (
-                        <div className="border rounded-lg">
-                            <div className="p-3 border-b">
-                                <div className="flex items-center gap-2 text-sm font-semibold">
-                                    <History className="w-4 h-4" />
-                                    <span>Item/Jasa Sering Dipakai</span>
-                                </div>
+                        <div className="border rounded-md">
+                            <div className="p-3 border-b flex items-center gap-2 font-semibold text-sm">
+                                <History className="w-4 h-4" /> Item/Jasa Sering Dipakai
                             </div>
-                            <ScrollArea className="h-48 p-3">
-                                <div className="space-y-2">
-                                    {groupedItems.slice(0, 8).map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold ${item.type === 'service' ? 'bg-blue-600' : 'bg-green-600'
-                                                    }`}>
-                                                    {item.type === 'service' ? 'J' : 'B'}
-                                                </span>
-                                                <div>
-                                                    <div className="font-medium text-gray-800">{item.name}</div>
-                                                    <div className="text-gray-500">
-                                                        Dipakai {item.count}x • Terakhir: {new Date(item.lastUsed).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                                                    </div>
+
+                            <ScrollArea className="h-48 p-3 space-y-2">
+                                {groupedItems.slice(0, 8).map((it, i) => (
+                                    <div
+                                        key={i}
+                                        className="p-2 bg-gray-50 rounded border text-xs flex justify-between"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-xs ${it.type === "service" ? "bg-blue-600" : "bg-green-600"
+                                                    }`}
+                                            >
+                                                {it.type === "service" ? "J" : "B"}
+                                            </span>
+                                            <div>
+                                                <div className="font-medium">{it.name}</div>
+                                                <div className="text-muted-foreground">
+                                                    {it.count}x • Terakhir:{" "}
+                                                    {new Date(it.lastUsed).toLocaleDateString("id-ID", {
+                                                        day: "numeric",
+                                                        month: "short",
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </ScrollArea>
                         </div>
                     )}
 
-                    {searchQuery.trim().length > 0 && customerHistory.length === 0 && (
-                        <div className="border rounded-lg p-4 text-center text-sm text-gray-500">
-                            <History className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                            Tidak ada history untuk &quot;{searchQuery}&quot;
-                        </div>
-                    )}
-
                     {/* Customer Form */}
-
-                    <div>
-                        <Label htmlFor="tipe">Tipe Customer</Label>
-
-                        <Select value={customer.tipe || ""} onValueChange={(value) => onCustomerChange("tipe", value)}>
-                            <SelectTrigger className="w-full mt-2">
-                                <SelectValue placeholder="-- Tipe Customer --" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Umum">Umum</SelectItem>
-                                <SelectItem value="Perusahaan">Perusahaan</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="space-y-4 border-t pt-4">
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                            Atau isi manual
-                        </div>
-                        <div>
-                            <Label htmlFor="nama-pelanggan">Nama Pelanggan</Label>
-                            <Input
-                                id="nama-pelanggan"
-                                type="text"
-                                value={customer.name}
-                                onChange={(e) => onCustomerChange("name", e.target.value)}
-                                placeholder="Masukkan nama"
-                                className="mt-2"
-                            />
-                            {customer.tipe && (
-                                <div className="mt-2 inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                                    Tipe: {customer.tipe}
-                                </div>
-                            )}
+                    <div className="space-y-4">
+                        <div className="w-full">
+                            <Label>Tipe Customer</Label>
+                            <Select
+                                value={customer.tipe || ""}
+                                onValueChange={(v) => onCustomerChange("tipe", v)}
+                            >
+                                <SelectTrigger className="mt-2 w-full">
+                                    <SelectValue placeholder="Pilih tipe customer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Umum">Umum</SelectItem>
+                                    <SelectItem value="Perusahaan">Perusahaan</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <Label htmlFor="plat-nomor">Plat Nomor</Label>
-                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
-                            </div>
-                            <Input
-                                id="plat-nomor"
-                                type="text"
-                                value={customer.platNomor}
-                                onChange={(e) => onCustomerChange("platNomor", e.target.value.toUpperCase())}
-                                placeholder="E 1234 AB"
-                                className="mt-2 uppercase"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <Label htmlFor="no-hp">No. HP</Label>
-                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
-                            </div>
-                            <Input
-                                id="no-hp"
-                                type="tel"
-                                value={customer.phone}
-                                onChange={(e) => onCustomerChange("phone", e.target.value)}
-                                placeholder="08xxxxxxxxxx"
-                                className="mt-2"
-                                required
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="border-t pt-4 space-y-4">
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <Label htmlFor="mobil">Kendaraan</Label>
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
-                                </div>
+                                <Label>Nama Pelanggan</Label>
                                 <Input
-                                    id="mobil"
-                                    type="text"
-                                    value={customer.mobil}
-                                    onChange={(e) => onCustomerChange("mobil", e.target.value)}
-                                    placeholder="Avanza"
+                                    value={customer.name}
+                                    onChange={(e) => onCustomerChange("name", e.target.value)}
                                     className="mt-2"
-                                    required
                                 />
                             </div>
+
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <Label htmlFor="km-masuk">KM Masuk</Label>
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
+                                    <Label>Plat Nomor</Label>
+                                    <Badge variant="destructive" className="text-xs">Wajib</Badge>
                                 </div>
                                 <Input
-                                    id="km-masuk"
-                                    type="number"
-                                    value={customer.kmMasuk}
-                                    onChange={(e) => onCustomerChange("kmMasuk", e.target.value)}
-                                    placeholder="50000"
-                                    className="mt-2"
-                                    required
+                                    value={customer.platNomor}
+                                    onChange={(e) =>
+                                        onCustomerChange("platNomor", e.target.value.toUpperCase())
+                                    }
+                                    className="mt-2 uppercase"
+                                    placeholder="Contoh: B 1234 ABC"
                                 />
+                            </div>
+
+                            <div>
+                                <Label>No. HP</Label>
+                                <Input
+                                    value={customer.phone}
+                                    onChange={(e) => onCustomerChange("phone", e.target.value)}
+                                    className="mt-2"
+                                    placeholder="Contoh: 08123456789"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <Label>Kendaraan</Label>
+                                        <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                                    </div>
+                                    <Input
+                                        value={customer.mobil}
+                                        onChange={(e) => onCustomerChange("mobil", e.target.value)}
+                                        className="mt-2"
+                                        placeholder="Contoh: Toyota Avanza"
+                                    />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <Label>KM Masuk</Label>
+                                        <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                                    </div>
+                                    <Input
+                                        type="number"
+                                        value={customer.kmMasuk}
+                                        onChange={(e) => onCustomerChange("kmMasuk", e.target.value)}
+                                        className="mt-2"
+                                        placeholder="Contoh: 50000"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <Button onClick={onSave} className="w-full mt-4">
+
+                    <Button onClick={onSave} className="w-full">
                         Simpan
                     </Button>
                 </div>

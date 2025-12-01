@@ -37,11 +37,21 @@ export function useCart() {
     };
 
     const updatePrice = (id: string, newPrice: number) => {
-        setCart(cart.map(c => c.id === id ? { ...c, price: newPrice } : c));
+        console.log('updatePrice called:', { id, newPrice, currentCart: cart });
+        setCart(prevCart => {
+            const newCart = prevCart.map(c => c.id === id ? { ...c, price: newPrice } : c);
+            console.log('new cart after price update:', newCart);
+            return newCart;
+        });
     };
 
     const updateDiscount = (id: string, discount: number) => {
-        setCart(cart.map(c => c.id === id ? { ...c, discount } : c));
+        console.log('updateDiscount called:', { id, discount, currentCart: cart });
+        setCart(prevCart => {
+            const newCart = prevCart.map(c => c.id === id ? { ...c, discount } : c);
+            console.log('new cart after discount update:', newCart);
+            return newCart;
+        });
     };
 
     const calculateSubtotal = () => {

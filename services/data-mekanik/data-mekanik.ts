@@ -9,7 +9,7 @@ const getSheetClient = async () => {
     const sheetBarang = process.env.SHEET_MEKANIK as string;
     const { auth, sheetId } = await GoogleAuth(sheetBarang);
 
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: 'v4', auth : auth as any });
     return { sheets, sheetId };
 };
 

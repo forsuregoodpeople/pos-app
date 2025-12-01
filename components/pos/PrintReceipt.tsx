@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CartItem } from "@/hooks/useCart";
 import { CustomerInfo } from "@/hooks/useCustomer";
 
@@ -29,6 +29,15 @@ const printStyles = `
   .print-only {
     visibility: visible !important;
     display: block !important;
+  }
+
+  /* PERBAIKAN: Pastikan gambar terlihat saat print */
+  .logo-image {
+    visibility: visible !important;
+    display: inline-block !important;
+    opacity: 1 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   /* PERBAIKAN PENTING: Pastikan setiap receipt-section menjadi halaman terpisah */
@@ -61,8 +70,10 @@ const printStyles = `
   @page {
     size: A4 portrait;
     margin: 10mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  
+
   /* Pastikan konten tidak terpotong */
   .receipt-table {
     font-size: 9px !important;
@@ -164,6 +175,22 @@ const printStyles = `
 .logo-image {
   height: 45px;
   width: auto;
+  /* PERBAIKAN: Tambahkan properti untuk print */
+  max-width: 100%;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.logo-placeholder {
+  height: 45px;
+  width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  background: #f0f0f0;
+  font-size: 10px;
+  color: #666;
 }
 
 .logo-text {
@@ -226,24 +253,36 @@ const printStyles = `
   padding-bottom: 2px;
 }
 
+/* PERUBAHAN: Info grid dengan layout yang lebih rapat */
 .info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3px;
+  grid-template-columns: auto 1fr;
+  gap: 3px 5px; /* Reduced horizontal gap to make it tighter */
   font-size: 9px;
 }
 
-.info-item.full-width {
-  grid-column: span 2;
+/* PERUBAHAN: Flex layout untuk item info agar lebih rapat */
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px; /* Reduced gap between label and value */
 }
 
 .info-label {
   font-weight: bold;
-  margin-right: 4px;
+  white-space: nowrap;
+  min-width: fit-content;
 }
 
 .info-value {
   flex: 1;
+  text-align: right;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.info-item.full-width {
+  grid-column: span 2;
 }
 
 .table-section {
@@ -460,36 +499,60 @@ interface ReceiptData {
 }
 
 const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) => {
+  const [logoSrc, setLogoSrc] = useState<string>('/logo.png');
+  const [logoError, setLogoError] = useState<boolean>(false);
+
+  // PERBAIKAN: Preload gambar untuk memastikan tersedia saat print
+  useEffect(() => {
+    const img = new Image();
+    img.src = logoSrc;
+    img.onload = () => {
+      console.log('Logo loaded successfully');
+    };
+    img.onerror = () => {
+      console.log('Logo failed to load, using fallback');
+      setLogoError(true);
+    };
+  }, [logoSrc]);
+
   return (
     <div className="receipt-section">
       {/* Header */}
       <div className="receipt-header">
         <div className="header-content">
           <div className="logo-section">
-            <img
-              src="/images/logo.png"
-              alt="Sunda Service Logo"
-              className="logo-image"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
+            {!logoError ? (
+              <img
+                src={logoSrc}
+                alt="Sunda Service Logo"
+                className="logo-image"
+                onError={() => {
+                  setLogoError(true);
+                }}
+                // PERBAIKAN: Tambahkan atribut penting untuk print
+                crossOrigin="anonymous"
+                loading="eager"
+              />
+            ) : (
+              <div className="logo-placeholder">
+                SUNDA SERVIS
+              </div>
+            )}
             <div className="logo-text">
               <div className="dealership-name">SUNDA SERVIS</div>
+              <div className="dealership-subtitle">Automotive Service & Maintenance</div>
             </div>
           </div>
           <div className="header-info">
             <div style={{ fontSize: '10px' }}>Jln Panjunan No.112</div>
             <div style={{ fontSize: '10px' }}>Cirebon</div>
             <div style={{ fontSize: '10px' }}>Telp: (0231) 234997</div>
-            <div style={{ fontSize: '9px', marginTop: '2px' }}>NPWP: 00.000.000.0-000.000</div>
           </div>
         </div>
-        <div className="receipt-title">NOTA BENGKEL</div>
+        <div className="receipt-title">NOTA</div>
         <div className="receipt-meta">
           <div><strong>Nomor:</strong> {data.nomor}</div>
-          <div><strong>Tanggal:</strong> {data.tanggal}</div>
+          <div><strong>Tanggal:</strong>{data.tanggal}</div>
           <div className="copy-label">{label}</div>
         </div>
       </div>
@@ -502,9 +565,10 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
             <span className="info-label">Nama:</span>
             <span className="info-value">{data.namaPelanggan}</span>
           </div>
+          {/* PERUBAHAN: Nomor telpon di-grid yang sama, lebih rapat */}
           <div className="info-item">
-            <span className="info-label">No. Telpon:</span>
-            <span className="info-value">{data.telpPelanggan}</span>
+            <span className="info-value"><span className="info-label">No. Telpon: </span>
+              {data.telpPelanggan}</span>
           </div>
         </div>
       </div>
@@ -517,9 +581,9 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
             <span className="info-label">No. Polisi:</span>
             <span className="info-value">{data.noPolisi}</span>
           </div>
+          {/* PERUBAHAN: Merk/Type mepet ke kanan */}
           <div className="info-item">
-            <span className="info-label">Merk/Type:</span>
-            <span className="info-value">{data.merkType}</span>
+            <span className="info-value"><span className="info-label">Kendaraan: </span>{data.merkType}</span>
           </div>
           <div className="info-item">
             <span className="info-label">Kilometer:</span>
@@ -601,14 +665,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
           </table>
         </div>
       )}
-
-      {/* Garansi */}
-      {data.garansi && (
-        <div style={{ fontSize: '9px', border: '1px solid #000', padding: '4px', marginBottom: '5px' }}>
-          <strong>Garansi Perbaikan:</strong> {data.garansi}
-        </div>
-      )}
-
+      
       {/* Totals */}
       <div className="totals-section">
         <div className="totals-grid">
@@ -628,12 +685,14 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
       </div>
 
       {/* Keterangan Section - Textarea Besar */}
-      <div className="keterangan-section">
-        <div className="keterangan-label">KETERANGAN:</div>
-        <div className="keterangan-text">
-          {data.keterangan || 'Tidak ada keterangan tambahan'}
+      {data.keterangan && (
+        <div className="keterangan-section">
+          <div className="keterangan-label">KETERANGAN:</div>
+          <div className="keterangan-text">
+            {data.keterangan}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Signature Section */}
       <div className="signature-section">
@@ -643,7 +702,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
         </div>
         <div className="signature-box">
           <div className="signature-line"></div>
-          <div className="signature-label">Paraf Customer</div>
+          <div className="signature-label">Paraf Pelangan</div>
         </div>
       </div>
 
@@ -658,7 +717,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
       </div>
 
       {/* Catatan Penting */}
-      <div style={{ fontSize: '8px', marginTop: '4px', lineHeight: '1.2', padding: '0 3px' }}>
+      <div style={{ fontSize: '8px', marginTop: '4px', lineHeight: '1.2' }}>
         <strong>Catatan Penting:</strong> Bila masih ada hal-hal yang kurang berkenan dalam perbaikan,
         serahkan kembali kendaraan Anda sebelum meninggalkan bengkel atau tidak lebih dari 7 hari.
       </div>
@@ -679,8 +738,24 @@ export function PrintReceipt({
   const cartServices = items.filter(item => item.type === "service");
   const cartParts = items.filter(item => item.type === "part");
 
+  // PERBAIKAN: Fungsi print yang lebih baik
   const handlePrint = () => {
-    window.print();
+    // Pastikan gambar sudah dimuat sebelum print
+    const images = document.querySelectorAll('img');
+    const promises = Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve; 
+      });
+    });
+
+    Promise.all(promises).then(() => {
+      // Tunggu sebentar untuk memastikan render selesai
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    });
   };
 
   // Convert data to match ReceiptData interface
@@ -688,7 +763,7 @@ export function PrintReceipt({
     nomor: invoiceNumber,
     tanggal: new Date(date).toLocaleString('id-ID', {
       day: 'numeric',
-      month: 'long', 
+      month: 'long',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -706,19 +781,19 @@ export function PrintReceipt({
       nama: item.name,
       qty: item.qty.toString(),
       harga_satuan: `Rp ${item.price.toLocaleString('id-ID')}`,
-      diskon: `${item.discount}%`,
-      harga_netto: `Rp ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
+      diskon: `Rp ${item.discount.toLocaleString('id-ID')}`,
+      harga_netto: `Rp ${((item.price * item.qty) - item.discount).toLocaleString('id-ID')}`
     })),
     parts: cartParts.map((item, index) => ({
       no: index + 1,
       nama: item.name,
       qty: item.qty.toString(),
       harga_satuan: `Rp ${item.price.toLocaleString('id-ID')}`,
-      diskon: `${item.discount}%`,
-      harga_netto: `Rp ${((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID')}`
+      diskon: `Rp ${item.discount.toLocaleString('id-ID')}`,
+      harga_netto: `Rp ${((item.price * item.qty) - item.discount).toLocaleString('id-ID')}`
     })),
-    subtotalJasa: `Rp ${cartServices.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
-    subtotalParts: `Rp ${cartParts.reduce((sum, item) => sum + ((item.price * item.qty) * (1 - item.discount / 100)), 0).toLocaleString('id-ID')}`,
+    subtotalJasa: `Rp ${cartServices.reduce((sum, item) => sum + ((item.price * item.qty) - item.discount), 0).toLocaleString('id-ID')}`,
+    subtotalParts: `Rp ${cartParts.reduce((sum, item) => sum + ((item.price * item.qty) - item.discount), 0).toLocaleString('id-ID')}`,
     dpp: `Rp ${subtotal.toLocaleString('id-ID')}`,
     biayaLain: `Rp ${biayaLain.toLocaleString('id-ID')}`,
     grandTotal: `Rp ${(total + biayaLain).toLocaleString('id-ID')}`,

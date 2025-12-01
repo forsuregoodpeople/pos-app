@@ -22,51 +22,53 @@ export const useTransactionFilters = (
   endDate: string
 ) => {
   return useMemo(() => {
-    return transactions.filter(transaction => {
-      const matchesSearch = 
-        transaction.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.customer.platNomor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCustomerType = 
-        customerTypeFilter === "all" || 
-        (customerTypeFilter === "umum" && (!transaction.customer.tipe || transaction.customer.tipe === "umum")) ||
-        (customerTypeFilter === "perusahaan" && transaction.customer.tipe === "perusahaan");
-      
-      const matchesDateFilter = () => {
-        const transactionDate = new Date(transaction.savedAt);
+    return transactions
+      .filter(transaction => {
+        const matchesSearch = 
+          transaction.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.customer.platNomor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          transaction.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
         
-        // Custom date range filter
-        if (startDate && endDate) {
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          end.setHours(23, 59, 59, 999); // Include end date fully
-          return transactionDate >= start && transactionDate <= end;
-        }
+        const matchesCustomerType = 
+          customerTypeFilter === "all" || 
+          (customerTypeFilter === "umum" && (!transaction.customer.tipe || transaction.customer.tipe === "umum")) ||
+          (customerTypeFilter === "perusahaan" && transaction.customer.tipe === "perusahaan");
         
-        // Preset date filters
-        if (dateFilter === "all") return true;
+        const matchesDateFilter = () => {
+          const transactionDate = new Date(transaction.savedAt);
+          
+          // Custom date range filter
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999); // Include end date fully
+            return transactionDate >= start && transactionDate <= end;
+          }
+          
+          // Preset date filters
+          if (dateFilter === "all") return true;
+          
+          const now = new Date();
+          
+          switch (dateFilter) {
+            case "today":
+              return transactionDate.toDateString() === now.toDateString();
+            case "week":
+              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return transactionDate >= weekAgo;
+            case "month":
+              return transactionDate.getMonth() === now.getMonth() && 
+                     transactionDate.getFullYear() === now.getFullYear();
+            case "year":
+              return transactionDate.getFullYear() === now.getFullYear();
+            default:
+              return true;
+          }
+        };
         
-        const now = new Date();
-        
-        switch (dateFilter) {
-          case "today":
-            return transactionDate.toDateString() === now.toDateString();
-          case "week":
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return transactionDate >= weekAgo;
-          case "month":
-            return transactionDate.getMonth() === now.getMonth() && 
-                   transactionDate.getFullYear() === now.getFullYear();
-          case "year":
-            return transactionDate.getFullYear() === now.getFullYear();
-          default:
-            return true;
-        }
-      };
-      
-      return matchesSearch && matchesCustomerType && matchesDateFilter();
-    });
+        return matchesSearch && matchesCustomerType && matchesDateFilter();
+      })
+      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime()); // Sort by latest first (descending)
   }, [transactions, searchQuery, customerTypeFilter, dateFilter, startDate, endDate]);
 };
 

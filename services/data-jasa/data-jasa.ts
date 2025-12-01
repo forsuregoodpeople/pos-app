@@ -12,7 +12,7 @@ const getSheetClient = async () => {
     }
     const { auth, sheetId } = await GoogleAuth(sheetJasa);
 
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: 'v4', auth: auth as any });
     return { sheets, sheetId };
 };
 

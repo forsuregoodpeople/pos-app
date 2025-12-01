@@ -13,7 +13,7 @@ const getSheetClient = async () => {
 
     try {
         const { auth, sheetId } = await GoogleAuth(sheetTransaksi);
-        const sheets = google.sheets({ version: 'v4', auth });
+        const sheets = google.sheets({ version: 'v4', auth : auth as any });
 
         return { sheets, sheetId };
     } catch (error) {
@@ -25,7 +25,7 @@ const getSheetClient = async () => {
 export async function getTransactionsAction(): Promise<Transaction[]> {
     try {
         const { sheets, sheetId } = await getSheetClient();
-        const range = 'Data Transaksi!A:M';
+        const range = 'Data Transaksi!A:N';
 
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
@@ -82,7 +82,8 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
                     },
                     items: items,
                     total: Number(row[11]) || 0,
-                    savedAt: savedAt
+                    savedAt: savedAt,
+                    keterangan: row[13] || ''
                 };
 
                 transactions.push(transaction);
@@ -103,7 +104,7 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
 
         const getAllData = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
-            range: 'Data Transaksi!A:M',
+            range: 'Data Transaksi!A:N',
         });
 
         const rowData = [
@@ -120,7 +121,8 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                 JSON.stringify(transaction.customer.mekaniks || []),
                 JSON.stringify(transaction.items),
                 transaction.total,
-                transaction.savedAt || new Date().toISOString()
+                transaction.savedAt || new Date().toISOString(),
+                transaction.keterangan || ''
             ]
         ];
 
@@ -133,7 +135,7 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
 
         const response = await sheets.spreadsheets.values.update({
             spreadsheetId: sheetId,
-            range: `Data Transaksi!A${nextRow}:M${nextRow}`,
+            range: `Data Transaksi!A${nextRow}:N${nextRow}`,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: rowData
@@ -183,13 +185,14 @@ export async function updateTransactionAction(invoiceNumber: string, transaction
                 JSON.stringify(transaction.customer.mekaniks || []),
                 JSON.stringify(transaction.items),
                 transaction.total,
-                transaction.savedAt || new Date().toISOString()
+                transaction.savedAt || new Date().toISOString(),
+                transaction.keterangan || ''
             ]
         ];
 
         await sheets.spreadsheets.values.update({
             spreadsheetId: sheetId,
-            range: `Data Transaksi!A${rowIndexInSheet}:M${rowIndexInSheet}`,
+            range: `Data Transaksi!A${rowIndexInSheet}:N${rowIndexInSheet}`,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: rowData
