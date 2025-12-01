@@ -7,6 +7,9 @@ import { DataJasa } from '@/hooks/useDataJasa';
 
 const getSheetClient = async () => {
     const sheetJasa = process.env.SHEET_JASA as string;
+    if (!sheetJasa) {
+        throw new Error('SHEET_JASA environment variable is not set');
+    }
     const { auth, sheetId } = await GoogleAuth(sheetJasa);
 
     const sheets = google.sheets({ version: 'v4', auth });

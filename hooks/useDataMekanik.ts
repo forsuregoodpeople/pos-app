@@ -26,7 +26,16 @@ export function useDataMekanik() {
             const errorMessage = err instanceof Error ? err.message : "Gagal memuat data mekanik.";
             console.error('useDataMekanik: Load error:', errorMessage);
             setError(errorMessage);
-            setItems([]);
+            // Set dummy data when API fails
+            const dummyMekaniks: DataMekanik[] = [
+                { id: '1', name: 'Budi' },
+                { id: '2', name: 'Ahmad' },
+                { id: '3', name: 'Santoso' },
+                { id: '4', name: 'Joko' },
+                { id: '5', name: 'Rudi' },
+            ];
+            setItems(dummyMekaniks);
+            console.log('Using dummy mekanik data');
         } finally {
             console.log('useDataMekanik: Setting loading to false');
             setLoading(false);

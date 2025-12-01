@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useCart } from "@/hooks/useCart";
 import { useCustomer } from "@/hooks/useCustomer";
 import { useProducts } from "@/hooks/useProducts";
+import { useDataBarang } from "@/hooks/useDataBarang";
+import { updateStockAction } from "@/services/data-barang/data-barang";
 import { useDataJasa } from "@/hooks/useDataJasa";
 import { useTransaction } from "@/hooks/useTransaction";
 import { useCustomerHistory } from "@/hooks/useCustomerHistory";
@@ -23,6 +25,7 @@ export default function PointOnSale() {
     const { customer, updateCustomer, setCustomerFromHistory, clearCustomer } = useCustomer();
     const { parts, loading: partsLoading, error: partsError } = useProducts();
     const { items: services, loading: servicesLoading, error: servicesError } = useDataJasa();
+    const { items: barangItems, updateItem: updateBarangStock } = useDataBarang();
     const { invoiceNumber, date, saveInvoice } = useTransaction();
     const { mechanics, updateMechanics, clearMechanics } = useMechanics();
 
@@ -47,6 +50,24 @@ export default function PointOnSale() {
     };
 
     const handleAddToCart = (item: { id: string; name: string; price: number }, type: "service" | "part") => {
+        if (type === "part") {
+            const barangItem = barangItems.find(b => b.id === item.id);
+            const existingCartItem = cart.find(c => c.id === item.id);
+            const currentQty = existingCartItem ? existingCartItem.qty : 0;
+            
+            if (barangItem && currentQty + 1 > barangItem.quantity) {
+                toast.error(`Stok ${item.name} tidak mencukupi! Tersedia: ${barangItem.quantity}, Diminta: ${currentQty + 1}`, {
+                    position: 'top-right',
+                    style: {
+                        background: '#dc2626',
+                        color: 'white',
+                        border: '1px solid #991b1b',
+                    }
+                });
+                return;
+            }
+        }
+        
         const itemName = addToCart(item, type);
         toast.success(`${itemName} ditambahkan`, {
             position: 'bottom-left',
@@ -58,7 +79,7 @@ export default function PointOnSale() {
         toast.success("Data pelanggan dipilih");
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (cart.length === 0) {
             toast.error("Keranjang masih kosong!");
             return;
@@ -69,42 +90,70 @@ export default function PointOnSale() {
             return;
         }
 
+        // Check stock availability
+        const partsToUpdate = cart.filter(item => item.type === "part");
+        for (const part of partsToUpdate) {
+            const barangItem = barangItems.find(b => b.id === part.id);
+            if (barangItem) {
+                if (part.qty > barangItem.quantity) {
+                    toast.error(`Stok ${barangItem.name} tidak mencukupi! Tersedia: ${barangItem.quantity}, Diminta: ${part.qty}`, {
+                        position: 'bottom-left',
+                    });
+                    return;
+                }
+            }
+        }
+
         const customerWithMechanics = {
             ...customer,
-            mekaniks: mechanics.map(m => ({
+            mekaniks: mechanics.length > 0 ? mechanics.map(m => ({
                 name: m.name,
                 percentage: m.percentage
-            }))
+            })) : []
         };
 
         const subtotal = calculateSubtotal();
         const total = calculateTotal();
         const grandTotal = total + biayaLain;
 
-        const result = saveInvoice(customerWithMechanics, cart, grandTotal);
+        // Update stock for parts using the hook
+        for (const part of partsToUpdate) {
+            try {
+                await updateBarangStock(part.id, part.qty);
+            } catch (err) {
+                console.error('Failed to update transaction quantity for', part.name, err);
+                throw err;
+            }
+        }
 
+        console.log('Saving transaction with mechanics:', customerWithMechanics.mekanics);
+        const result = await saveInvoice(customerWithMechanics, cart, grandTotal);
 
-        toast.success("Transaksi berhasil disimpan!", {
-            position: 'bottom-left',
-        });
+        if (result) {
+            toast.success("Transaksi berhasil disimpan!", {
+                position: 'bottom-left',
+            });
 
+            const originalTitle = document.title;
+            document.title = `Nota_${invoiceNumber.replace(/\//g, '_')}`;
 
+            window.print();
 
-        const originalTitle = document.title;
-        document.title = `Nota_${invoiceNumber.replace(/\//g, '_')}`;
+            document.title = originalTitle;
 
-        window.print();
+            clearCart();
+            clearCustomer();
+            clearMechanics();
+            setSearchQuery("");
+            setPpn(0);
+            setBiayaLain(0);
 
-        document.title = originalTitle;
-
-        clearCart();
-        clearCustomer();
-        clearMechanics();
-        setSearchQuery("");
-        setPpn(0);
-        setBiayaLain(0);
-
-        window.location.reload();
+            window.location.reload();
+        } else {
+            toast.error("Gagal menyimpan transaksi!", {
+                position: 'bottom-left',
+            });
+        }
     };
 
     return (
@@ -153,6 +202,7 @@ export default function PointOnSale() {
                         searchQuery={productSearchQuery}
                         onSearchChange={setProductSearchQuery}
                         onAddToCart={handleAddToCart}
+                        cartItems={cart}
                     />
 
 
@@ -179,6 +229,7 @@ export default function PointOnSale() {
                         onMechanicClick={() => setShowMechanicModal(true)}
                         onCheckout={handleCheckout}
                         isMobile={false}
+                        maxStocks={barangItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
                     />
                 </div>
 

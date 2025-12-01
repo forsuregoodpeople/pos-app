@@ -45,6 +45,7 @@ interface DataTableProps<T> {
         key: keyof T;
         label: string;
         type?: 'text' | 'number';
+        editable?: boolean;
     }>;
     title: string;
 }
@@ -130,8 +131,8 @@ export function DataTable<T extends { id: string }>({
                         </DialogTitle>
                     </DialogHeader>
 
-                    <form onSubmit={onAdd ? submit : (e) => e.preventDefault()} className="space-y-4">
-                        {columns.map((col) => (
+                    <form onSubmit={submit} className="space-y-4">
+                        {columns.filter(col => col.editable !== false).map((col) => (
                             <div key={String(col.key)}>
                                 <Label htmlFor={`field-${String(col.key)}`}>{col.label}</Label>
                                 <Input
@@ -205,7 +206,9 @@ export function DataTable<T extends { id: string }>({
                                             {columns.map((col) => (
                                                 <TableCell key={col.key as string}>
                                                     {col.type === 'number'
-                                                        ? `Rp ${(item[col.key] as number).toLocaleString('id-ID')}`
+                                                        ? col.key === 'quantity' 
+                                                            ? (item[col.key] as number).toLocaleString('id-ID')
+                                                            : `Rp ${(item[col.key] as number).toLocaleString('id-ID')}`
                                                         : String(item[col.key] || '-')}
                                                 </TableCell>
                                             ))}

@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useDataMekanik } from "@/hooks/useDataMekanik";
 import { DataTable } from "@/components/shared/DataTable";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, Printer } from "lucide-react";
 
 export default function DataMekanikPage() {
     const { items, loading, addItem, updateItem, deleteItem } = useDataMekanik();

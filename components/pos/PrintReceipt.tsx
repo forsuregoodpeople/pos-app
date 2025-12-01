@@ -31,36 +31,72 @@ const printStyles = `
     display: block !important;
   }
 
-  .receipt-page-vertical {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 297mm;
-    margin: 0;
-    padding: 5mm;
-    gap: 3mm;
-    page-break-after: always;
-    box-sizing: border-box;
-  }
-  
+  /* PERBAIKAN PENTING: Pastikan setiap receipt-section menjadi halaman terpisah */
   .receipt-section {
     width: 100%;
-    min-height: 135mm;
-    margin: 0;
-    padding: 6px;
+    min-height: 275mm !important;
+    height: 275mm !important;
+    margin: 0 !important;
+    padding: 10mm !important;
     box-sizing: border-box;
     border: 1px solid #000;
-    page-break-inside: avoid;
-    overflow: visible;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    break-after: page !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    position: relative;
+  }
+  
+  /* Hapus page-break setelah section terakhir */
+  .receipt-section:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
   
   .horizontal-cut-line {
-    display: none;
+    display: none !important;
   }
   
   @page {
     size: A4 portrait;
-    margin: 5mm;
+    margin: 10mm;
+  }
+  
+  /* Pastikan konten tidak terpotong */
+  .receipt-table {
+    font-size: 9px !important;
+  }
+  
+  .section-title {
+    font-size: 11px !important;
+  }
+  
+  .receipt-title {
+    font-size: 14px !important;
+  }
+  
+  .info-grid {
+    font-size: 9px !important;
+  }
+  
+  .totals-grid {
+    font-size: 10px !important;
+  }
+  
+  .total-row.grand-total {
+    font-size: 11px !important;
+  }
+  
+  .receipt-footer {
+    font-size: 8px !important;
+  }
+  
+  .keterangan-section {
+    font-size: 9px !important;
+    margin: 4px 2px !important;
+    padding: 4px 5px !important;
+    min-height: 40px !important;
   }
 }
 
@@ -72,6 +108,7 @@ const printStyles = `
   width: 100%;
 }
 
+/* PERBAIKAN: Layout untuk screen */
 .receipt-page-vertical {
   display: flex;
   flex-direction: column;
@@ -90,15 +127,16 @@ const printStyles = `
 
 @media print {
   .receipt-page-vertical {
-    flex-direction: column !important;
-    gap: 3mm !important;
+    display: block !important;
+    width: 100% !important;
+    gap: 0 !important;
   }
 }
 
 .receipt-section {
   width: 100%;
   margin: 0;
-  padding: 12px;
+  padding: 15px;
   border: 1px solid #000;
   background: white;
   box-sizing: border-box;
@@ -110,55 +148,8 @@ const printStyles = `
     max-width: 500px;
     margin-left: auto;
     margin-right: auto;
-  }
-}
-
-@media print {
-  .receipt-section {
-    max-width: none;
-    margin: 0;
-    min-height: 135mm;
-    overflow: visible;
-    font-size: 9px;
-    line-height: 1.1;
-    width: 100%;
-    padding: 6px;
-    border: 1px solid #000;
-  }
-  
-  .receipt-table {
-    font-size: 8px;
-  }
-  
-  .section-title {
-    font-size: 10px;
-  }
-  
-  .receipt-title {
-    font-size: 13px;
-  }
-  
-  .info-grid {
-    font-size: 8px;
-  }
-  
-  .totals-grid {
-    font-size: 9px;
-  }
-  
-  .total-row.grand-total {
-    font-size: 10px;
-  }
-  
-  .receipt-footer {
-    font-size: 7px;
-  }
-  
-  .keterangan-section {
-    font-size: 8px;
-    margin: 3px 2px;
-    padding: 3px 4px;
-    min-height: 45px;
+    min-height: auto !important;
+    height: auto !important;
   }
 }
 
@@ -167,7 +158,7 @@ const printStyles = `
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .logo-image {
@@ -181,12 +172,12 @@ const printStyles = `
 
 .dealership-name {
   font-weight: bold;
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 2px;
 }
 
 .dealership-subtitle {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
 }
 
@@ -194,18 +185,18 @@ const printStyles = `
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .header-info {
   text-align: right;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .receipt-title {
   font-weight: bold;
-  font-size: 15px;
-  margin: 4px 0;
+  font-size: 16px;
+  margin: 6px 0;
   text-align: center;
 }
 
@@ -213,32 +204,33 @@ const printStyles = `
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 9px;
-  margin-top: 2px;
+  font-size: 10px;
+  margin-top: 4px;
 }
 
 .copy-label {
   font-style: italic;
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: bold;
 }
 
 .info-section {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .section-title {
   font-weight: bold;
-  font-size: 10px;
-  margin-bottom: 2px;
+  font-size: 11px;
+  margin-bottom: 3px;
   border-bottom: 1px solid #000;
-  padding-bottom: 1px;
+  padding-bottom: 2px;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  font-size: 8px;
+  gap: 3px;
+  font-size: 9px;
 }
 
 .info-item.full-width {
@@ -247,7 +239,7 @@ const printStyles = `
 
 .info-label {
   font-weight: bold;
-  margin-right: 3px;
+  margin-right: 4px;
 }
 
 .info-value {
@@ -255,20 +247,20 @@ const printStyles = `
 }
 
 .table-section {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .receipt-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 8px;
+  font-size: 9px;
   table-layout: fixed;
 }
 
 .receipt-table th,
 .receipt-table td {
   border: 1px solid #000;
-  padding: 1px 2px;
+  padding: 2px 3px;
   text-align: left;
   word-wrap: break-word;
 }
@@ -292,78 +284,79 @@ const printStyles = `
 }
 
 .totals-section {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .totals-grid {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .total-row {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .total-row.grand-total {
   font-weight: bold;
-  font-size: 10px;
+  font-size: 11px;
   border-top: 1px solid #000;
-  padding-top: 2px;
+  padding-top: 3px;
+  margin-top: 3px;
 }
 
 .signature-section {
   display: flex;
   justify-content: space-around;
-  margin: 12px 0;
+  margin: 15px 0;
 }
 
 .signature-box {
   text-align: center;
-  width: 90px;
+  width: 100px;
 }
 
 .signature-line {
   border-bottom: 1px solid #000;
-  height: 20px;
-  margin-bottom: 3px;
+  height: 25px;
+  margin-bottom: 4px;
 }
 
 .signature-label {
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .receipt-footer {
-  margin-top: 6px;
+  margin-top: 8px;
   border-top: 1px solid #000;
-  padding-top: 4px;
-  font-size: 7px;
+  padding-top: 5px;
+  font-size: 8px;
 }
 
 .keterangan-section {
-  margin: 4px 2px;
-  padding: 4px 5px;
+  margin: 5px 3px;
+  padding: 5px 6px;
   border: 1px solid #000;
-  font-size: 9px;
-  line-height: 1.2;
-  min-height: 50px;
+  font-size: 10px;
+  line-height: 1.3;
+  min-height: 55px;
   background-color: #f9f9f9;
 }
 
 .keterangan-label {
   font-weight: bold;
-  margin-bottom: 2px;
-  font-size: 8px;
+  margin-bottom: 3px;
+  font-size: 9px;
 }
 
 .keterangan-text {
   white-space: pre-wrap;
   word-wrap: break-word;
-  min-height: 40px;
+  min-height: 45px;
   font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .horizontal-cut-line {
@@ -376,16 +369,16 @@ const printStyles = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px 0;
+    padding: 10px 0;
     width: 100%;
     border-top: 2px dashed #666;
     border-bottom: 2px dashed #666;
-    margin: 8px 0;
+    margin: 10px 0;
   }
   
   .cut-label {
-    margin-top: 4px;
-    font-size: 10px;
+    margin-top: 5px;
+    font-size: 11px;
     color: #666;
   }
 }
@@ -487,10 +480,10 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
             </div>
           </div>
           <div className="header-info">
-            <div style={{ fontSize: '9px' }}>Jln Panjunan No.112</div>
-            <div style={{ fontSize: '9px' }}>Cirebon</div>
-            <div style={{ fontSize: '9px' }}>Telp: (0231) 234997</div>
-            <div style={{ fontSize: '8px', marginTop: '1px' }}>NPWP: 00.000.000.0-000.000</div>
+            <div style={{ fontSize: '10px' }}>Jln Panjunan No.112</div>
+            <div style={{ fontSize: '10px' }}>Cirebon</div>
+            <div style={{ fontSize: '10px' }}>Telp: (0231) 234997</div>
+            <div style={{ fontSize: '9px', marginTop: '2px' }}>NPWP: 00.000.000.0-000.000</div>
           </div>
         </div>
         <div className="receipt-title">NOTA BENGKEL</div>
@@ -542,23 +535,23 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
           <table className="receipt-table">
             <thead>
               <tr>
-                <th className="text-center" style={{ width: '22px' }}>No</th>
+                <th className="text-center" style={{ width: '25px' }}>No</th>
                 <th className="text-left">Nama Pekerjaan</th>
-                <th className="text-center" style={{ width: '22px' }}>Qty</th>
-                <th className="text-right" style={{ width: '70px' }}>Harga Satuan</th>
-                <th className="text-right" style={{ width: '45px' }}>Diskon</th>
-                <th className="text-right" style={{ width: '70px' }}>Harga Netto</th>
+                <th className="text-center" style={{ width: '25px' }}>Qty</th>
+                <th className="text-right" style={{ width: '75px' }}>Harga Satuan</th>
+                <th className="text-right" style={{ width: '50px' }}>Diskon</th>
+                <th className="text-right" style={{ width: '75px' }}>Harga Netto</th>
               </tr>
             </thead>
             <tbody>
               {data.serviceItems.map((item, index) => (
                 <tr key={index}>
                   <td className="text-center">{item.no}</td>
-                  <td style={{ fontSize: '7px' }}>{item.nama}</td>
+                  <td style={{ fontSize: '8px' }}>{item.nama}</td>
                   <td className="text-center">{item.qty}</td>
-                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_satuan}</td>
+                  <td className="text-right" style={{ fontSize: '8px' }}>{item.harga_satuan}</td>
                   <td className="text-right">{item.diskon}</td>
-                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_netto}</td>
+                  <td className="text-right" style={{ fontSize: '8px' }}>{item.harga_netto}</td>
                 </tr>
               ))}
             </tbody>
@@ -579,23 +572,23 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
           <table className="receipt-table">
             <thead>
               <tr>
-                <th className="text-center" style={{ width: '22px' }}>No</th>
+                <th className="text-center" style={{ width: '25px' }}>No</th>
                 <th className="text-left">Nama Suku Cadang</th>
-                <th className="text-center" style={{ width: '22px' }}>Qty</th>
-                <th className="text-right" style={{ width: '70px' }}>Harga Satuan</th>
-                <th className="text-right" style={{ width: '45px' }}>Diskon</th>
-                <th className="text-right" style={{ width: '70px' }}>Harga Netto</th>
+                <th className="text-center" style={{ width: '25px' }}>Qty</th>
+                <th className="text-right" style={{ width: '75px' }}>Harga Satuan</th>
+                <th className="text-right" style={{ width: '50px' }}>Diskon</th>
+                <th className="text-right" style={{ width: '75px' }}>Harga Netto</th>
               </tr>
             </thead>
             <tbody>
               {data.parts.map((item, index) => (
                 <tr key={index}>
                   <td className="text-center">{item.no}</td>
-                  <td style={{ fontSize: '7px' }}>{item.nama}</td>
+                  <td style={{ fontSize: '8px' }}>{item.nama}</td>
                   <td className="text-center">{item.qty}</td>
-                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_satuan}</td>
+                  <td className="text-right" style={{ fontSize: '8px' }}>{item.harga_satuan}</td>
                   <td className="text-right">{item.diskon}</td>
-                  <td className="text-right" style={{ fontSize: '7px' }}>{item.harga_netto}</td>
+                  <td className="text-right" style={{ fontSize: '8px' }}>{item.harga_netto}</td>
                 </tr>
               ))}
             </tbody>
@@ -611,7 +604,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
 
       {/* Garansi */}
       {data.garansi && (
-        <div style={{ fontSize: '8px', border: '1px solid #000', padding: '3px', marginBottom: '4px' }}>
+        <div style={{ fontSize: '9px', border: '1px solid #000', padding: '4px', marginBottom: '5px' }}>
           <strong>Garansi Perbaikan:</strong> {data.garansi}
         </div>
       )}
@@ -634,6 +627,14 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
         </div>
       </div>
 
+      {/* Keterangan Section - Textarea Besar */}
+      <div className="keterangan-section">
+        <div className="keterangan-label">KETERANGAN:</div>
+        <div className="keterangan-text">
+          {data.keterangan || 'Tidak ada keterangan tambahan'}
+        </div>
+      </div>
+
       {/* Signature Section */}
       <div className="signature-section">
         <div className="signature-box">
@@ -648,23 +649,16 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
 
       {/* Footer */}
       <div className="receipt-footer">
-        <div style={{ fontSize: '8px', fontWeight: 'bold', marginBottom: '1px' }}>PERHATIAN / ATTENTION:</div>
-        <div style={{ fontSize: '7px', lineHeight: '1.1' }}>
+        <div style={{ fontSize: '9px', fontWeight: 'bold', marginBottom: '2px' }}>PERHATIAN / ATTENTION:</div>
+        <div style={{ fontSize: '8px', lineHeight: '1.2' }}>
           Pembayaran ini sah apabila pada Nota Bengkel ini telah ditanda tangani oleh kasir kami,
           dan tanpa coretan. Perusahaan tidak bertanggung jawab atas uang yang dibayarkan yang
           tidak disertai bukti seperti tersebut diatas.
         </div>
       </div>
 
-      {/* Keterangan Section - Textarea Besar */}
-      <div className="keterangan-section">
-        <div className="keterangan-label">KETERANGAN:</div>
-        <div className="keterangan-text">
-        </div>
-      </div>
-
       {/* Catatan Penting */}
-      <div style={{ fontSize: '7px', marginTop: '3px', lineHeight: '1.1', padding: '0 2px' }}>
+      <div style={{ fontSize: '8px', marginTop: '4px', lineHeight: '1.2', padding: '0 3px' }}>
         <strong>Catatan Penting:</strong> Bila masih ada hal-hal yang kurang berkenan dalam perbaikan,
         serahkan kembali kendaraan Anda sebelum meninggalkan bengkel atau tidak lebih dari 7 hari.
       </div>
@@ -692,7 +686,13 @@ export function PrintReceipt({
   // Convert data to match ReceiptData interface
   const receiptData: ReceiptData = {
     nomor: invoiceNumber,
-    tanggal: new Date(date).toLocaleDateString('id-ID'),
+    tanggal: new Date(date).toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
     namaPelanggan: customer.name || '',
     telpPelanggan: customer.phone || '',
     npwpPelanggan: '00.000.000.0-000.000',
@@ -734,7 +734,7 @@ export function PrintReceipt({
           🖨️ Cetak Nota
         </button>
         <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-          Klik tombol di atas untuk mencetak kedua nota (Toko & Customer) dalam satu halaman A4
+          Klik tombol di atas untuk mencetak kedua nota (Toko & Customer) dalam dua halaman terpisah
         </div>
       </div>
 
@@ -742,7 +742,7 @@ export function PrintReceipt({
         <div className="receipt-page-vertical">
           <ReceiptSection data={receiptData} label="UNTUK TOKO" />
           <div className="horizontal-cut-line">
-            <div className="cut-label">GARIS POTONG</div>
+            <div className="cut-label">GARIS POTONG - Halaman 1 dari 2</div>
           </div>
           <ReceiptSection data={receiptData} label="UNTUK PELANGGAN" />
         </div>

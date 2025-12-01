@@ -1,14 +1,17 @@
+'use client'
+
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    getPartsAction, 
-    updatePartAction, 
+import {
+    getPartsAction,
     deletePartAction,
-} from '@/services/data-barang/data-barang'; 
+    updatePartAction,
+} from '@/services/data-barang/data-barang';
 
 export interface DataBarang {
     id: string;
     code: string;
     name: string;
+    quantity: number;
     price: number;
 }
 
@@ -18,20 +21,23 @@ export function useDataBarang() {
     const [error, setError] = useState<string | null>(null);
 
     const loadData = useCallback(async () => {
-        console.log('useDataBarang: Starting loadData');
         setLoading(true);
         setError(null);
         try {
             const data = await getPartsAction();
-            console.log('useDataBarang: Data loaded successfully:', data.length, 'items');
-            setItems(data);
+            setItems(
+                data.map((part) => ({
+                    id: part.id,
+                    code: part.code,
+                    name: part.name,
+                    quantity: part.quantity || 0,
+                    price: part.price,
+                }))
+            );
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Gagal memuat data barang.";
-            console.error('useDataBarang: Load error:', errorMessage);
-            setError(errorMessage);
+            setError(err instanceof Error ? err.message : 'Gagal memuat data barang.');
             setItems([]);
         } finally {
-            console.log('useDataBarang: Setting loading to false');
             setLoading(false);
         }
     }, []);
@@ -42,37 +48,46 @@ export function useDataBarang() {
 
     const updateItem = async (id: string, item: Omit<DataBarang, 'id'>) => {
         setError(null);
-        const oldItem = items.find(i => i.id === id);
+        const oldItem = items.find((i) => i.id === id);
         if (!oldItem) return;
 
-        const updatedItem: DataBarang = { id, ...item, code: item.code || '' };
+        const updatedItem: DataBarang = {
+            id,
+            code: item.code || oldItem.code,
+            name: item.name || oldItem.name,
+            quantity: item.quantity,
+            price: item.price ?? oldItem.price,
+        };
 
-        setItems(prev => prev.map(i => i.id === id ? updatedItem : i));
+        setItems((prev) => prev.map((i) => (i.id === id ? updatedItem : i)));
 
         try {
-            await updatePartAction(updatedItem);
+            const updates: { name?: string; price?: number } = {};
+            if (item.name && item.name !== oldItem.name) updates.name = item.name;
+            if (item.price !== undefined && item.price !== oldItem.price) updates.price = item.price;
+
+            if (Object.keys(updates).length) {
+                await updatePartAction(oldItem.code, updates);
+            }
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Gagal update barang.";
-            setError(errorMessage);
-            setItems(prev => prev.map(i => i.id === id ? oldItem : i));
-            console.error('Update barang error:', err);
+            setError(err instanceof Error ? err.message : 'Gagal update barang.');
+            setItems((prev) => prev.map((i) => (i.id === id ? oldItem : i)));
             throw err;
         }
     };
 
     const deleteItem = async (id: string) => {
         setError(null);
-        const oldItems = items;
+        const itemToDelete = items.find((i) => i.id === id);
+        if (!itemToDelete) return;
 
-        setItems(prev => prev.filter(i => i.id !== id));
+        setItems((prev) => prev.filter((i) => i.id !== id));
 
         try {
             await deletePartAction(id);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Gagal menghapus barang.";
-            setError(errorMessage);
-            setItems(oldItems);
-            console.error('Delete barang error:', err);
+            setError(err instanceof Error ? err.message : 'Gagal menghapus barang.');
+            setItems((prev) => [...prev, itemToDelete]);
             throw err;
         }
     };

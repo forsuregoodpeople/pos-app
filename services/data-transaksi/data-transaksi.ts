@@ -17,6 +17,7 @@ const getSheetClient = async () => {
 
         return { sheets, sheetId };
     } catch (error) {
+        console.error('Transaction Sheet Client Error:', error);
         throw new Error(`Gagal menginisialisasi klien Google Sheets: ${error instanceof Error ? error.message : 'Kesalahan tidak diketahui'}`);
     }
 };
@@ -64,7 +65,7 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
                     discount: Number(item.discount) || 0
                 }));
 
-                const savedAt = row[12] || new Date().toISOString();
+                const savedAt = row[12] || row[1] || new Date().toISOString();
 
                 const transaction: Transaction = {
                     invoiceNumber: row[0] || '',
@@ -86,7 +87,7 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
 
                 transactions.push(transaction);
             } catch (error) {
-                // Error parsing row is handled silently here to avoid excessive logging
+                console.error('Error parsing transaction row:', error);
             }
         });
 
@@ -100,38 +101,104 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
     try {
         const { sheets, sheetId } = await getSheetClient();
 
-        const row = [
-            transaction.invoiceNumber,
-            transaction.date,
-            transaction.customer.name,
-            transaction.customer.phone,
-            transaction.customer.kmMasuk,
-            transaction.customer.mobil,
-            transaction.customer.platNomor,
-            transaction.customer.tipe || 'umum',
-            transaction.customer.mekanik || '',
-            JSON.stringify(transaction.customer.mekaniks || []),
-            JSON.stringify(transaction.items),
-            transaction.total,
-            transaction.savedAt || new Date().toISOString()
-        ];
-
-        const response = await sheets.spreadsheets.values.append({
+        const getAllData = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
             range: 'Data Transaksi!A:M',
+        });
+
+        const rowData = [
+            [
+                transaction.invoiceNumber,
+                transaction.date,
+                transaction.customer.name,
+                transaction.customer.phone,
+                transaction.customer.kmMasuk,
+                transaction.customer.mobil,
+                transaction.customer.platNomor,
+                transaction.customer.tipe || 'umum',
+                transaction.customer.mekanik || '',
+                JSON.stringify(transaction.customer.mekaniks || []),
+                JSON.stringify(transaction.items),
+                transaction.total,
+                transaction.savedAt || new Date().toISOString()
+            ]
+        ];
+
+        const getNextRow = await sheets.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: 'Data Transaksi!A:A',
+        });
+
+        const nextRow = (getNextRow.data.values?.length || 1) + 1;
+
+        const response = await sheets.spreadsheets.values.update({
+            spreadsheetId: sheetId,
+            range: `Data Transaksi!A${nextRow}:M${nextRow}`,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
-                values: [row]
+                values: rowData
             }
         });
 
-        if (response.data.updates && response.data.updates.updatedRows) {
+        if (response.data.updatedCells && response.data.updatedCells >= 13) {
             return transaction;
         }
 
         throw new Error('Gagal menyimpan transaksi ke Google Sheets.');
     } catch (error) {
         throw new Error(`Gagal menyimpan transaksi: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+export async function updateTransactionAction(invoiceNumber: string, transaction: Transaction): Promise<Transaction> {
+    try {
+        const { sheets, sheetId } = await getSheetClient();
+        const range = 'Data Transaksi!A:A';
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: range,
+        });
+
+        const rows = response.data.values || [];
+        const rowIndexInArray = rows.findIndex((row: string[]) => row[0] === invoiceNumber);
+
+        if (rowIndexInArray === -1) {
+            throw new Error(`Transaksi dengan invoice ${invoiceNumber} tidak ditemukan.`);
+        }
+
+        const rowIndexInSheet = rowIndexInArray + 1;
+
+        const rowData = [
+            [
+                transaction.invoiceNumber,
+                transaction.date,
+                transaction.customer.name,
+                transaction.customer.phone,
+                transaction.customer.kmMasuk,
+                transaction.customer.mobil,
+                transaction.customer.platNomor,
+                transaction.customer.tipe || 'umum',
+                transaction.customer.mekanik || '',
+                JSON.stringify(transaction.customer.mekaniks || []),
+                JSON.stringify(transaction.items),
+                transaction.total,
+                transaction.savedAt || new Date().toISOString()
+            ]
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: sheetId,
+            range: `Data Transaksi!A${rowIndexInSheet}:M${rowIndexInSheet}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: rowData
+            }
+        });
+
+        return transaction;
+    } catch (error) {
+        throw new Error(`Gagal mengupdate transaksi: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

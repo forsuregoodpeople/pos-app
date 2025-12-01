@@ -1,19 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter } from "lucide-react";
+import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter, Printer } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTransaction, Transaction } from "@/hooks/useTransaction";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAdvancedAIAnalysis } from "@/hooks/useAdvancedAIAnalysis";
 import { useTransactionFilters } from "@/hooks/useTransactionFilters";
 import { TransactionDetailModal } from "@/components/history/TransactionDetailModal";
+import { PrintReceipt } from "@/components/pos/PrintReceipt";
 import { AdvancedKeyMetrics } from "@/components/history/AdvancedChartComponents";
 import { HumanInsightsAnalysis } from "@/components/history/HumanInsightsAnalysis";
 
 export default function HistoryPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [printTransaction, setPrintTransaction] = useState<Transaction | null>(null);
     const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
     const [dateFilter, setDateFilter] = useState<string>("all");
     const [startDate, setStartDate] = useState<string>("");
@@ -42,10 +44,12 @@ export default function HistoryPage() {
             if (isNaN(date.getTime())) {
                 return dateString; // Return original string if invalid date
             }
-            return date.toLocaleDateString('id-ID', {
+            return date.toLocaleString('id-ID', {
                 day: 'numeric',
                 month: 'long',
-                year: 'numeric'
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
         } catch (error) {
             return dateString; // Return original string if error
@@ -202,16 +206,27 @@ export default function HistoryPage() {
                                             <span className="mx-2">•</span>
                                             <span>{formatDate(transaction.date)}</span>
                                         </div>
-                                        <button
-                                            onClick={() => {
-                                                console.log('Transaction clicked:', transaction);
-                                                setSelectedTransaction(transaction);
-                                            }}
-                                            className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
-                                        >
-                                            <Eye className="w-3 h-3" />
-                                            Detail
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    console.log('Transaction clicked:', transaction);
+                                                    setSelectedTransaction(transaction);
+                                                }}
+                                                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+                                            >
+                                                <Eye className="w-3 h-3" />
+                                                Detail
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setPrintTransaction(transaction);
+                                                }}
+                                                className="flex items-center gap-1 px-3 py-1 text-xs bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition-colors"
+                                            >
+                                                <Printer className="w-3 h-3" />
+                                                Print
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -226,6 +241,41 @@ export default function HistoryPage() {
                 isOpen={!!selectedTransaction}
                 onClose={() => setSelectedTransaction(null)}
             />
+
+            {/* Print Receipt Modal */}
+            {printTransaction && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-4 border-b flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Print Nota</h3>
+                            <button
+                                onClick={() => setPrintTransaction(null)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="p-4">
+                            <PrintReceipt
+                                invoiceNumber={printTransaction.invoiceNumber}
+                                date={printTransaction.savedAt}
+                                customer={{
+                                    name: printTransaction.customer.name,
+                                    phone: printTransaction.customer.phone,
+                                    kmMasuk: printTransaction.customer.kmMasuk,
+                                    mobil: printTransaction.customer.mobil,
+                                    platNomor: printTransaction.customer.platNomor,
+                                    tipe: printTransaction.customer.tipe
+                                }}
+                                items={printTransaction.items}
+                                subtotal={printTransaction.items.reduce((sum, item) => sum + ((item.price * item.qty) - (item.discount || 0)), 0)}
+                                biayaLain={0}
+                                total={printTransaction.total}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </SidebarInset>
     );
 }

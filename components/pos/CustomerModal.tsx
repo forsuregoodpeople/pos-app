@@ -289,7 +289,7 @@ export function CustomerModal({
                             Atau isi manual
                         </div>
                         <div>
-                            <Label htmlFor="nama-pelanggan">Nama Pelanggan *</Label>
+                            <Label htmlFor="nama-pelanggan">Nama Pelanggan</Label>
                             <Input
                                 id="nama-pelanggan"
                                 type="text"
@@ -306,7 +306,10 @@ export function CustomerModal({
                         </div>
 
                         <div>
-                            <Label htmlFor="plat-nomor">Plat Nomor</Label>
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="plat-nomor">Plat Nomor</Label>
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
+                            </div>
                             <Input
                                 id="plat-nomor"
                                 type="text"
@@ -314,11 +317,15 @@ export function CustomerModal({
                                 onChange={(e) => onCustomerChange("platNomor", e.target.value.toUpperCase())}
                                 placeholder="E 1234 AB"
                                 className="mt-2 uppercase"
+                                required
                             />
                         </div>
 
                         <div>
-                            <Label htmlFor="no-hp">No. HP</Label>
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="no-hp">No. HP</Label>
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
+                            </div>
                             <Input
                                 id="no-hp"
                                 type="tel"
@@ -326,12 +333,16 @@ export function CustomerModal({
                                 onChange={(e) => onCustomerChange("phone", e.target.value)}
                                 placeholder="08xxxxxxxxxx"
                                 className="mt-2"
+                                required
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <Label htmlFor="mobil">Mobil</Label>
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="mobil">Kendaraan</Label>
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
+                                </div>
                                 <Input
                                     id="mobil"
                                     type="text"
@@ -339,10 +350,14 @@ export function CustomerModal({
                                     onChange={(e) => onCustomerChange("mobil", e.target.value)}
                                     placeholder="Avanza"
                                     className="mt-2"
+                                    required
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="km-masuk">KM Masuk</Label>
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="km-masuk">KM Masuk</Label>
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Wajib</span>
+                                </div>
                                 <Input
                                     id="km-masuk"
                                     type="number"
@@ -350,6 +365,7 @@ export function CustomerModal({
                                     onChange={(e) => onCustomerChange("kmMasuk", e.target.value)}
                                     placeholder="50000"
                                     className="mt-2"
+                                    required
                                 />
                             </div>
                         </div>

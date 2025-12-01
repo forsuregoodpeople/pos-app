@@ -51,8 +51,7 @@ export function useCart() {
     const calculateTotal = () => {
         return cart.reduce((sum, item) => {
             const itemTotal = item.price * item.qty;
-            const discountAmount = itemTotal * (item.discount / 100);
-            return sum + (itemTotal - discountAmount);
+            return sum + (itemTotal - item.discount);
         }, 0);
     };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Trash2, User, Percent, Search } from "lucide-react";
+import { User, Percent, Trash2, Search } from "lucide-react";
 import { useDataMekanik } from "@/hooks/useDataMekanik";
 import {
     Dialog,
@@ -48,21 +48,6 @@ export function MechanicModal({
         return [51, ...Array(count - 1).fill(splitPercentage)];
     };
 
-    const addMechanic = () => {
-        const newCount = localMechanics.length + 1;
-        const percentages = getDefaultPercentages(newCount);
-        const updatedMechanics = localMechanics.map((mechanic, index) => ({
-            ...mechanic,
-            percentage: percentages[index],
-        }));
-        const newMechanic: Mechanic = {
-            id: Date.now().toString(),
-            name: "",
-            percentage: percentages[newCount - 1],
-        };
-        setLocalMechanics([...updatedMechanics, newMechanic]);
-    };
-
     const selectMechanic = (mechanic: { id: string; name: string }) => {
         const newCount = localMechanics.length + 1;
         const percentages = getDefaultPercentages(newCount);
@@ -71,7 +56,7 @@ export function MechanicModal({
             percentage: percentages[index],
         }));
         const newMechanic: Mechanic = {
-            id: Date.now().toString(),
+            id: mechanic.id,
             name: mechanic.name,
             percentage: percentages[newCount - 1],
         };
@@ -86,7 +71,20 @@ export function MechanicModal({
     };
 
     const removeMechanic = (id: string) => {
-        setLocalMechanics(localMechanics.filter(mechanic => mechanic.id !== id));
+        const newCount = localMechanics.length - 1;
+        if (newCount === 0) {
+            setLocalMechanics([]);
+            return;
+        }
+        
+        const percentages = getDefaultPercentages(newCount);
+        const updatedMechanics = localMechanics
+            .filter(mechanic => mechanic.id !== id)
+            .map((mechanic, index) => ({
+                ...mechanic,
+                percentage: percentages[index],
+            }));
+        setLocalMechanics(updatedMechanics);
     };
 
     const getTotalPercentage = () => {
@@ -94,10 +92,7 @@ export function MechanicModal({
     };
 
     const handleSave = () => {
-        const validMechanics = localMechanics.filter(mechanic => 
-            mechanic.name.trim() && mechanic.percentage > 0
-        );
-        onSave(validMechanics);
+        onSave(localMechanics);
         onClose();
     };
 
@@ -121,10 +116,14 @@ export function MechanicModal({
                                 className="pl-10"
                             />
                         </div>
-                        {searchQuery.trim() && (
-                            <div className="mt-2 border rounded-lg">
-                                <ScrollArea className="h-48">
-                                    {availableMechanics
+                        <div className="mt-2 border rounded-lg">
+                            <ScrollArea className="h-64">
+                                {availableMechanics.length === 0 ? (
+                                    <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                        Belum ada data mekanik. Tambahkan di menu Data Mekanik terlebih dahulu.
+                                    </div>
+                                ) : (
+                                    availableMechanics
                                         .filter(m => 
                                             m.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
                                             !localMechanics.some(lm => lm.name === m.name)
@@ -137,28 +136,30 @@ export function MechanicModal({
                                             >
                                                 <div className="font-medium text-gray-800">{mechanic.name}</div>
                                             </button>
-                                        ))}
-                                    {availableMechanics.filter(m => 
+                                        ))
+                                )}
+                                {availableMechanics.length > 0 && 
+                                    availableMechanics.filter(m => 
                                         m.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
                                         !localMechanics.some(lm => lm.name === m.name)
                                     ).length === 0 && (
-                                        <div className="px-3 py-4 text-center text-sm text-gray-500">
-                                            {availableMechanics.length === 0 
-                                                ? "Belum ada data mekanik. Tambahkan di menu Data Mekanik terlebih dahulu."
-                                                : "Mekanik tidak ditemukan atau sudah ditambahkan"}
-                                        </div>
-                                    )}
-                                </ScrollArea>
-                            </div>
-                        )}
+                                    <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                        {searchQuery.trim() 
+                                            ? "Mekanik tidak ditemukan atau sudah ditambahkan"
+                                            : "Semua mekanik sudah ditambahkan"
+                                        }
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
                         {localMechanics.length === 0 ? (
                             <div className="text-center py-8 text-gray-500 border rounded-lg">
                                 <User className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                <p className="text-sm">Belum ada mekanik ditambahkan</p>
-                                <p className="text-xs mt-1">Klik tombol + untuk menambah mekanik</p>
+                                <p className="text-sm">Belum ada mekanik dipilih</p>
+                                <p className="text-xs mt-1">Cari dan pilih mekanik dari daftar di atas</p>
                             </div>
                         ) : (
                             localMechanics.map((mechanic, index) => (
@@ -167,61 +168,36 @@ export function MechanicModal({
                                         <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-blue-600" />
                                             <span className="text-sm font-semibold text-gray-700">
-                                                Mekanik {index + 1}
+                                                {mechanic.name}
                                             </span>
                                         </div>
-                                        {localMechanics.length > 1 && (
-                                            <button
-                                                onClick={() => removeMechanic(mechanic.id)}
-                                                className="text-red-500 hover:bg-red-50 p-1 rounded"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => removeMechanic(mechanic.id)}
+                                            className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <Label htmlFor={`mechanic-name-${mechanic.id}`}>Nama Mekanik</Label>
+                                    <div>
+                                        <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase (%)</Label>
+                                        <div className="relative mt-2">
                                             <Input
-                                                id={`mechanic-name-${mechanic.id}`}
-                                                type="text"
-                                                value={mechanic.name}
-                                                onChange={(e) => updateMechanic(mechanic.id, "name", e.target.value)}
-                                                placeholder="Nama mekanik"
-                                                className="mt-2"
+                                                id={`mechanic-percentage-${mechanic.id}`}
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={mechanic.percentage}
+                                                onChange={(e) => updateMechanic(mechanic.id, "percentage", parseInt(e.target.value) || 0)}
+                                                placeholder="0"
+                                                className="pr-8"
                                             />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase (%)</Label>
-                                            <div className="relative mt-2">
-                                                <Input
-                                                    id={`mechanic-percentage-${mechanic.id}`}
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    value={mechanic.percentage}
-                                                    onChange={(e) => updateMechanic(mechanic.id, "percentage", parseInt(e.target.value) || 0)}
-                                                    placeholder="0"
-                                                    className="pr-8"
-                                                />
-                                                <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                                            </div>
+                                            <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                         </div>
                                     </div>
                                 </div>
                             ))
                         )}
                     </div>
-
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addMechanic}
-                        className="w-full border-dashed"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Tambah Mekanik Manual
-                    </Button>
 
                     {localMechanics.length > 0 && (
                         <div className={`rounded-lg p-3 text-sm ${
@@ -257,7 +233,6 @@ export function MechanicModal({
                         <Button
                             type="button"
                             onClick={handleSave}
-                            disabled={localMechanics.length === 0 || localMechanics.every(m => !m.name.trim())}
                             className="flex-1"
                         >
                             Simpan

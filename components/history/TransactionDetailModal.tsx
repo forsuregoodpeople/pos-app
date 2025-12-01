@@ -253,29 +253,23 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
               </div>
             )}
 
-             {/* PPN and Biaya Lain */}
-             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-               <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">
-                  {formatCurrency(
-                    transaction.items.reduce((sum, item) => sum + ((item.price * item.qty) - ((item as any).discount || 0)), 0)
-                  )}
-                </span>
-               </div>
-               <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-600">PPN (11%):</span>
+              {/* Biaya Lain */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Subtotal:</span>
                  <span className="font-medium">
-                   {formatCurrency(((transaction as any).total * 11) / 109)}
+                   {formatCurrency(
+                     transaction.items.reduce((sum, item) => sum + ((item.price * item.qty) - ((item as any).discount || 0)), 0)
+                   )}
                  </span>
-               </div>
-               <div className="flex justify-between items-center text-sm">
-                 <span className="text-gray-600">Biaya Lain:</span>
-                 <span className="font-medium">
-                   {formatCurrency((transaction as any).biayaLain || 0)}
-                 </span>
-               </div>
-             </div>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Biaya Lain:</span>
+                  <span className="font-medium">
+                    {formatCurrency((transaction as any).biayaLain || 0)}
+                  </span>
+                </div>
+              </div>
 
              {/* Grand Total */}
              <div className="bg-gray-100 rounded-lg p-4">

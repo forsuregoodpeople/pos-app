@@ -16,6 +16,7 @@ interface CartItemsProps {
     mechanics: { id: string; name: string; percentage: number }[];
     onRemove: (id: string) => void;
     onUpdateQty: (id: string, qty: number) => void;
+    maxStocks?: { [key: string]: number };
     onUpdatePrice: (id: string, price: number) => void;
     onUpdateDiscount: (id: string, discount: number) => void;
     onBiayaLainChange: (biayaLain: number) => void;
@@ -24,6 +25,7 @@ interface CartItemsProps {
     onMechanicClick: () => void;
     onCheckout: () => void;
     isMobile?: boolean;
+    maxStocks?: { [key: string]: number };
 }
 
 export function CartItems({
@@ -45,6 +47,7 @@ export function CartItems({
     onMechanicClick,
     onCheckout,
     isMobile = false,
+    maxStocks = {},
 }: CartItemsProps) {
     const cartServices = cart.filter(item => item.type === "service");
     const cartParts = cart.filter(item => item.type === "part");
@@ -95,8 +98,8 @@ export function CartItems({
             }
         };
 
-        const handleQuickDiscount = (discountPercent: number) => {
-            setEditingDiscount(discountPercent);
+        const handleQuickDiscount = (discountAmount: number) => {
+            setEditingDiscount(discountAmount);
         };
 
         return (
@@ -113,8 +116,9 @@ export function CartItems({
                                         type="number"
                                         value={editingPrice}
                                         onChange={(e) => setEditingPrice(Number(e.target.value))}
-                                        className="w-24 px-2 py-1 border border-gray-300 rounded text-xs"
+                                        className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         placeholder="Harga baru"
+                                        autoFocus
                                     />
                                     <button
                                         onClick={handleSavePrice}
@@ -129,38 +133,37 @@ export function CartItems({
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-500">Diskon (%):</span>
-                                    <input
-                                        type="number"
-                                        value={editingDiscount}
-                                        onChange={(e) => setEditingDiscount(Number(e.target.value))}
-                                        className="w-16 px-2 py-1 border border-gray-300 rounded text-xs"
-                                        placeholder="0"
-                                        min="0"
-                                        max="100"
-                                    />
-                                    <div className="flex gap-1">
-                                        <button
-                                            onClick={() => handleQuickDiscount(0)}
-                                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                        >
-                                            0%
-                                        </button>
-                                        <button
-                                            onClick={() => handleQuickDiscount(5)}
-                                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                        >
-                                            5%
-                                        </button>
-                                        <button
-                                            onClick={() => handleQuickDiscount(10)}
-                                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
-                                        >
-                                            10%
-                                        </button>
-                                    </div>
-                                </div>
+                                 <div className="flex items-center gap-2">
+                                     <span className="text-xs text-gray-500">Diskon (Rp):</span>
+                                     <input
+                                         type="number"
+                                         value={editingDiscount}
+                                         onChange={(e) => setEditingDiscount(Number(e.target.value))}
+                                         className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                         placeholder="0"
+                                         min="0"
+                                     />
+                                     <div className="flex gap-1">
+                                         <button
+                                             onClick={() => handleQuickDiscount(0)}
+                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                                         >
+                                             0
+                                         </button>
+                                         <button
+                                             onClick={() => handleQuickDiscount(5000)}
+                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                                         >
+                                             5K
+                                         </button>
+                                         <button
+                                             onClick={() => handleQuickDiscount(10000)}
+                                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+                                         >
+                                             10K
+                                         </button>
+                                     </div>
+                                 </div>
                             </div>
                         ) : (
                             <div className="mt-1">
@@ -173,7 +176,7 @@ export function CartItems({
                                 </button>
                                 {item.discount > 0 && (
                                     <div className="text-xs text-green-600 font-medium">
-                                        Diskon: {item.discount}%
+                                        Diskon: Rp {item.discount.toLocaleString('id-ID')}
                                     </div>
                                 )}
                             </div>
@@ -196,20 +199,37 @@ export function CartItems({
                         />
                         <span className="w-8 text-center font-semibold">{item.qty}</span>
                         <QtyButton
-                            onClick={() => onUpdateQty(item.id, item.qty + 1)}
+                            onClick={() => {
+                                const maxStock = maxStocks[item.id] || Infinity;
+                                if (item.qty < maxStock) {
+                                    onUpdateQty(item.id, item.qty + 1);
+                                } else {
+                                    // Import toast dynamically to avoid circular dependency
+                                    import('sonner').then(({ toast }) => {
+                                        toast.error(`Stok ${item.name} tidak mencukupi! Maksimal: ${maxStock}`, {
+                                            position: 'top-right',
+                                            style: {
+                                                background: '#dc2626',
+                                                color: 'white',
+                                                border: '1px solid #991b1b',
+                                            }
+                                        });
+                                    });
+                                }
+                            }}
                             label="+"
                             borderColor={qtyBorderColor}
                         />
                     </div>
                     <div className="text-right">
-                        <div className={`font-bold ${textColor}`}>
-                            Rp {((item.price * item.qty) * (1 - item.discount / 100)).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </div>
-                        {item.discount > 0 && (
-                            <div className="text-xs text-gray-500 line-through">
-                                Rp {(item.price * item.qty).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </div>
-                        )}
+                         <div className={`font-bold ${textColor}`}>
+                             Rp {((item.price * item.qty) - item.discount).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                         </div>
+                         {item.discount > 0 && (
+                             <div className="text-xs text-gray-500 line-through">
+                                 Rp {(item.price * item.qty).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                             </div>
+                         )}
                     </div>
                 </div>
             </div>

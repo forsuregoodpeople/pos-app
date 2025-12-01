@@ -6,6 +6,7 @@ import {
     saveTransactionAction,
     deleteTransactionAction,
 } from '@/services/data-transaksi/data-transaksi';
+import { updateStockAction } from '@/services/data-barang/data-barang';
 
 export interface Transaction {
     invoiceNumber: string;
@@ -25,20 +26,16 @@ export function useTransaction() {
     const rand : number = Math.floor((Math.random() * 1000) + 1);
 
     const loadTransactions = useCallback(async () => {
-        console.log('useTransaction: Starting loadTransactions');
         setLoading(true);
         setError(null);
         try {
             const data = await getTransactionsAction();
-            console.log('useTransaction: Transactions loaded successfully:', data.length, 'items');
             setTransactions(data);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "Gagal memuat data transaksi.";
-            console.error('useTransaction: Load error:', errorMessage);
             setError(errorMessage);
             setTransactions([]);
         } finally {
-            console.log('useTransaction: Setting loading to false');
             setLoading(false);
         }
     }, []);
@@ -63,6 +60,11 @@ export function useTransaction() {
 
         try {
             const savedTransaction = await saveTransactionAction(invoiceData);
+            const saveQuantity = await updateStockAction(items);
+
+            if (!saveQuantity.success) {
+                throw new Error('Gagal memperbarui stok barang.');
+            }
             setTransactions(prev => [...prev, savedTransaction]);
             return savedTransaction;
         } catch (err) {

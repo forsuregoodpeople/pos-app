@@ -17,9 +17,7 @@ export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChang
         <div className="bg-white border-b shrink-0">
             <div className="flex justify-center items-center">
                 <button
-                    onClick={() => {
-                        onTabChange("services");
-                    }}
+                    onClick={() => onTabChange("services")}
                     className={`flex-1 py-3 px-4 font-semibold transition-colors text-sm sm:text-base ${
                         activeTab === "services"
                             ? "bg-blue-600 text-white"
@@ -29,9 +27,7 @@ export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChang
                     Jasa ({servicesCount})
                 </button>
                 <button
-                    onClick={() => {
-                        onTabChange("parts");
-                    }}
+                    onClick={() => onTabChange("parts")}
                     className={`flex-1 py-3 px-4 font-semibold transition-colors text-sm sm:text-base ${
                         activeTab === "parts"
                             ? "bg-green-600 text-white"

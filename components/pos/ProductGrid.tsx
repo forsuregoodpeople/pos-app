@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 
 interface Service {
@@ -12,6 +12,7 @@ interface Part {
     id: string;
     name: string;
     price: number;
+    quantity?: number;
 }
 
 interface ProductGridProps {
@@ -24,6 +25,7 @@ interface ProductGridProps {
         item: { id: string; name: string; price: number },
         type: "service" | "part"
     ) => void;
+    cartItems?: Array<{ id: string; qty: number }>;
 }
 
 export default function ProductGrid({
@@ -33,7 +35,28 @@ export default function ProductGrid({
     searchQuery,
     onSearchChange,
     onAddToCart,
+    cartItems = [],
 }: ProductGridProps) {
+    const [tempStock, setTempStock] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        const initialStock: Record<string, number> = {};
+        parts.forEach(part => {
+            initialStock[part.id] = part.quantity || 0;
+        });
+        setTempStock(initialStock);
+    }, [parts]);
+
+    useEffect(() => {
+        const newStock: Record<string, number> = {};
+        parts.forEach(part => {
+            const cartQty = cartItems
+                .filter(item => item.id === part.id)
+                .reduce((total, item) => total + item.qty, 0);
+            newStock[part.id] = Math.max(0, (part.quantity || 0) - cartQty);
+        });
+        setTempStock(newStock);
+    }, [parts, cartItems]);
     const filteredServices = services.filter((s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -88,14 +111,20 @@ export default function ProductGrid({
                     {displayItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={() =>
-                                onAddToCart(item, activeTab === "services" ? "service" : "part")
-                            }
+                            onClick={() => {
+                                if (activeTab === "parts" && tempStock[item.id] === 0) {
+                                    return;
+                                }
+                                onAddToCart(item, activeTab === "services" ? "service" : "part");
+                            }}
                             className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all text-left flex flex-col justify-between h-fit border-2 border-transparent ${
                                 activeTab === "services"
                                     ? "hover:border-blue-500"
+                                    : tempStock[item.id] === 0
+                                    ? "opacity-50 cursor-not-allowed hover:border-gray-300"
                                     : "hover:border-green-500"
                             }`}
+                            disabled={activeTab === "parts" && tempStock[item.id] === 0}
                         >
                             <div className="font-medium text-sm text-gray-800 mb-1.5 line-clamp-2 min-h-[2.5rem]">
                                 {item.name}
@@ -103,6 +132,17 @@ export default function ProductGrid({
                             <div className={`${activeTab === "services" ? "text-blue-600" : "text-green-600"} font-semibold text-sm`}>
                                 {formatCurrency(item.price)}
                             </div>
+                            {activeTab === "parts" && "quantity" in item && (
+                                <div className={`text-xs mt-1 ${
+                                    tempStock[item.id] === 0 
+                                        ? "text-red-500 font-medium" 
+                                        : tempStock[item.id] <= 5 
+                                        ? "text-orange-600" 
+                                        : "text-gray-500"
+                                }`}>
+                                    Stok: {tempStock[item.id] || 0}
+                                </div>
+                            )}
                         </button>
                     ))}
                 </div>
