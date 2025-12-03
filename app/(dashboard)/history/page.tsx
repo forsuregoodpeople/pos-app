@@ -9,8 +9,6 @@ import { useAdvancedAIAnalysis } from "@/hooks/useAdvancedAIAnalysis";
 import { useTransactionFilters } from "@/hooks/useTransactionFilters";
 import { TransactionDetailModal } from "@/components/history/TransactionDetailModal";
 import { PrintReceipt } from "@/components/pos/PrintReceipt";
-import { AdvancedKeyMetrics } from "@/components/history/AdvancedChartComponents";
-import { HumanInsightsAnalysis } from "@/components/history/HumanInsightsAnalysis";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -111,7 +109,7 @@ export default function HistoryPage() {
                             <div class="header-info">
                                 <div style="font-size: 10px;">Jln Panjunan No.112</div>
                                 <div style="font-size: 10px;">Cirebon</div>
-                                <div style="font-size: 10px;">Telp: (0231) 234997</div>
+                                <div style="font-size: 10px;">Telp: 0813-7000-368</div>
                             </div>
                         </div>
                         <div class="receipt-title">NOTA</div>

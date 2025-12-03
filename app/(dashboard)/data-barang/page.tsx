@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Printer } from "lucide-react";
 
 export default function DataBarangPage() {
-    const { items, loading, updateItem, deleteItem, error } = useDataBarang();
+    const { items, loading, updateItem, deleteItem, addItem, error } = useDataBarang();
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('all');
     const [isClient, setIsClient] = useState(false);
@@ -21,8 +21,8 @@ export default function DataBarangPage() {
     }, []);
 
     const columns = [
-        { key: 'code' as const, label: 'Kode Barang', type: 'text' as const, editable: false },
-        { key: 'name' as const, label: 'Nama Barang', type: 'text' as const, editable: false },
+        { key: 'code' as const, label: 'Kode Barang', type: 'text' as const, editable: true },
+        { key: 'name' as const, label: 'Nama Barang', type: 'text' as const, editable: true },
         { key: 'quantity' as const, label: 'Kuantitas', type: 'number' as const, editable: false },
         { key: 'price' as const, label: 'Harga', type: 'number' as const, editable: true },
     ];
@@ -34,9 +34,15 @@ export default function DataBarangPage() {
         
         const matchesStock = stockFilter === 'all' ||
             (stockFilter === '0' && item.quantity === 0) ||
-            (stockFilter === 'less5' && item.quantity < 5);
+            (stockFilter === 'less5' && item.quantity < 5) ||
+            (stockFilter === 'most' && item.quantity >= 10);
         
         return matchesSearch && matchesStock;
+    }).sort((a, b) => {
+        if (stockFilter === 'most') {
+            return b.quantity - a.quantity; // Sort by quantity descending for "most stock"
+        }
+        return 0; // Keep original order for other filters
     });
 
     const handlePrint = () => {
@@ -57,7 +63,7 @@ export default function DataBarangPage() {
                 <body>
                     <h1>LAPORAN DATA BARANG</h1>
                     <div class="filter-info">
-                        <strong>Filter:</strong> ${stockFilter === 'all' ? 'Semua Data' : stockFilter === '0' ? 'Stok = 0' : 'Stok < 5'}
+                        <strong>Filter:</strong> ${stockFilter === 'all' ? 'Semua Data' : stockFilter === '0' ? 'Stok = 0' : stockFilter === 'less5' ? 'Stok < 5' : 'Stok Terbanyak (≥10)'}
                         ${searchTerm ? `<br><strong>Pencarian:</strong> "${searchTerm}"` : ''}
                         <br><strong>Tanggal:</strong> ${new Date().toLocaleDateString('id-ID')}
                         <br><strong>Total Data:</strong> ${filteredItems.length} barang
@@ -128,6 +134,7 @@ export default function DataBarangPage() {
                             <SelectItem value="all">Semua Stok</SelectItem>
                             <SelectItem value="0">Stok = 0 (Habis)</SelectItem>
                             <SelectItem value="less5">Stok &lt; 5 (Menipis)</SelectItem>
+                            <SelectItem value="most">Stok Terbanyak (≥10)</SelectItem>
                         </SelectContent>
                             </Select>
                         </div>
@@ -143,7 +150,7 @@ export default function DataBarangPage() {
                         Menampilkan {filteredItems.length} dari {items.length} data barang
                         {stockFilter !== 'all' && (
                             <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
-                                {stockFilter === '0' ? 'Stok Habis' : 'Stok Menipis'}
+                                {stockFilter === '0' ? 'Stok Habis' : stockFilter === 'less5' ? 'Stok Menipis' : 'Stok Terbanyak'}
                             </span>
                         )}
                         {searchTerm && (
@@ -157,6 +164,7 @@ export default function DataBarangPage() {
                 <DataTable
                     items={filteredItems}
                     loading={loading}
+                    onAdd={(item) => addItem(item)}
                     onEdit={(id, item) => updateItem(id, item)}
                     onDelete={(id) => deleteItem(id)}
                     columns={columns}

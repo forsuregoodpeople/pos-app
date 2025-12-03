@@ -5,6 +5,7 @@ import {
     getPartsAction,
     deletePartAction,
     updatePartAction,
+    addPartAction,
 } from '@/services/data-barang/data-barang';
 
 export interface DataBarang {
@@ -76,6 +77,33 @@ export function useDataBarang() {
         }
     };
 
+    const addItem = async (item: Omit<DataBarang, 'id' | 'quantity'>) => {
+        setError(null);
+        
+        const newItem: DataBarang = {
+            id: item.code,
+            code: item.code,
+            name: item.name,
+            quantity: 0,
+            price: item.price,
+        };
+
+        // Optimistic update
+        setItems((prev) => [...prev, newItem]);
+
+        try {
+            await addPartAction({
+                code: item.code,
+                name: item.name,
+                price: item.price,
+            });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Gagal menambah barang.');
+            setItems((prev) => prev.filter((i) => i.id !== item.code));
+            throw err;
+        }
+    };
+
     const deleteItem = async (id: string) => {
         setError(null);
         const itemToDelete = items.find((i) => i.id === id);
@@ -98,6 +126,7 @@ export function useDataBarang() {
         error,
         updateItem,
         deleteItem,
+        addItem,
         reload: loadData,
     };
 }

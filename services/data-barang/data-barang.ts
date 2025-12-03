@@ -148,6 +148,49 @@ export async function updatePartAction(code: string, updates: { name?: string; p
     }
 }
 
+export async function addPartAction(item: { code: string; name: string; price: number }) {
+    try {
+        const { sheets, sheetId } = await getSheetClient();
+        
+        // Check if code already exists
+        const existingRowIndex = await findRowIndexByCode(sheets, sheetId, item.code);
+        if (existingRowIndex) {
+            throw new Error(`Barang dengan kode ${item.code} sudah ada.`);
+        }
+
+        // Get the current data to find the next empty row
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: 'Data Barang!A:F',
+        });
+
+        const rows = response.data.values || [];
+        const nextRow = rows.length + 1; // Next empty row
+
+        // Add new row with data
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: sheetId,
+            range: 'Data Barang!A:F',
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: [[
+                    item.code,
+                    item.name,
+                    '', // Category (empty for now)
+                    0,  // Initial quantity
+                    0,  // Current stock
+                    item.price
+                ]]
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error adding part:', error);
+        throw new Error(`Gagal menambah data barang: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
 export async function deletePartAction(id: string) {
     try {
         const { sheets, sheetId } = await getSheetClient();

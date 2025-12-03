@@ -11,12 +11,15 @@ const printStyles = `
 }
 
 @media print {
+  /* Sembunyikan semua elemen kecuali receipt-container */
   body * {
     visibility: hidden;
   }
   .receipt-container, .receipt-container * {
     visibility: visible;
   }
+  
+  /* Pastikan receipt-container menempati seluruh halaman tanpa overflow */
   .receipt-container {
     position: absolute;
     left: 0;
@@ -24,6 +27,18 @@ const printStyles = `
     width: 100%;
     padding: 0;
     margin: 0;
+    overflow: hidden;
+  }
+  
+  /* Sembunyikan elemen yang tidak perlu saat print */
+  .print-controls,
+  .horizontal-cut-line,
+  header,
+  footer,
+  nav,
+  aside {
+    display: none !important;
+    visibility: hidden !important;
   }
   
   .print-only {
@@ -43,10 +58,10 @@ const printStyles = `
   /* PERBAIKAN PENTING: Pastikan setiap receipt-section menjadi halaman terpisah */
   .receipt-section {
     width: 100%;
-    min-height: 275mm !important;
-    height: 275mm !important;
+    min-height: 279mm !important;
+    max-height: 279mm !important;
     margin: 0 !important;
-    padding: 10mm !important;
+    padding: 8mm !important;
     box-sizing: border-box;
     border: 1px solid #000;
     page-break-after: always !important;
@@ -65,11 +80,15 @@ const printStyles = `
   
   .horizontal-cut-line {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 5mm;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -119,7 +138,7 @@ const printStyles = `
   width: 100%;
 }
 
-/* PERBAIKAN: Layout untuk screen */
+  /* PERBAIKAN: Layout untuk screen */
 .receipt-page-vertical {
   display: flex;
   flex-direction: column;
@@ -141,6 +160,8 @@ const printStyles = `
     display: block !important;
     width: 100% !important;
     gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 }
 
@@ -546,7 +567,7 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
           <div className="header-info">
             <div style={{ fontSize: '10px' }}>Jln Panjunan No.112</div>
             <div style={{ fontSize: '10px' }}>Cirebon</div>
-            <div style={{ fontSize: '10px' }}>Telp: (0231) 234997</div>
+            <div style={{ fontSize: '10px' }}>Telp: 0813-7000-368</div>
           </div>
         </div>
         <div className="receipt-title">NOTA</div>
@@ -740,6 +761,12 @@ export function PrintReceipt({
 
   // PERBAIKAN: Fungsi print yang lebih baik
   const handlePrint = () => {
+    // Sembunyikan elemen yang tidak diperlukan sebelum print
+    const elementsToHide = document.querySelectorAll('header, footer, nav, aside, .sidebar, .navbar');
+    elementsToHide.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+    
     // Pastikan gambar sudah dimuat sebelum print
     const images = document.querySelectorAll('img');
     const promises = Array.from(images).map(img => {
@@ -754,7 +781,14 @@ export function PrintReceipt({
       // Tunggu sebentar untuk memastikan render selesai
       setTimeout(() => {
         window.print();
-      }, 100);
+        
+        // Kembalikan tampilan setelah print
+        setTimeout(() => {
+          elementsToHide.forEach(el => {
+            (el as HTMLElement).style.display = '';
+          });
+        }, 100);
+      }, 200);
     });
   };
 
