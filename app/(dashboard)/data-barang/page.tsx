@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Printer } from "lucide-react";
 
 export default function DataBarangPage() {
-    const { items, loading, updateItem, deleteItem, addItem, error } = useDataBarang();
+    const { items, loading, updateItem, deleteItem, error } = useDataBarang();
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('all');
     const [isClient, setIsClient] = useState(false);
@@ -164,7 +164,6 @@ export default function DataBarangPage() {
                 <DataTable
                     items={filteredItems}
                     loading={loading}
-                    onAdd={(item) => addItem(item)}
                     onEdit={(id, item) => updateItem(id, item)}
                     onDelete={(id) => deleteItem(id)}
                     columns={columns}

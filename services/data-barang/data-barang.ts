@@ -27,8 +27,33 @@ const findRowIndexByCode = async (sheets: any, sheetId: string, code: string): P
 
     const index = rows.findIndex((row: string[], i: number) => i > 0 && row[0] === code);
 
-    return index !== -1 ? index + 1 : null; // +1 karena index sheet mulai dari 1, bukan 0
+    return index !== -1 ? index + 1 : null;
 };
+
+const findAllRowSheet1BarangIndexByCode = async (
+    sheets: any,
+    sheetId: string,
+    code: string
+): Promise<number[]> => {
+    const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: sheetId,
+        range: 'Sheet1!A:I',
+    });
+
+    const rows = res.data.values || [];
+    if (!rows.length) return [];
+
+    const search = code.trim();
+
+    return rows
+        .map((row: string[], i: number) => {
+            const kolomD = (row[3] || '').trim();
+            return i > 0 && kolomD === search ? i + 1 : null;
+        })
+        .filter((v : any) => v !== null) as number[];
+};
+
+
 
 export async function getPartsAction(): Promise<Part[]> {
     try {
@@ -86,7 +111,7 @@ export async function updateStockAction(items: CartItem[]): Promise<{ success: b
 
             const { id, qty } = item;
 
-            const rowIndex : any = await findRowIndexByCode(sheets, sheetId, id);
+            const rowIndex: any = await findRowIndexByCode(sheets, sheetId, id);
             if (!rowIndex) {
                 console.warn(`Barang dengan code ${id} tidak ditemukan di Data Barang. Melewati update stok.`);
                 continue;
@@ -112,53 +137,81 @@ export async function updateStockAction(items: CartItem[]): Promise<{ success: b
 
 
 
-export async function updatePartAction(code: string, updates: { name?: string; price?: number }) {
-    try {
-        const { sheets, sheetId } = await getSheetClient();
-        const rowIndex = await findRowIndexByCode(sheets, sheetId, code);
-        if (!rowIndex) {
-            throw new Error(`Barang dengan code ${code} tidak ditemukan.`);
-        }
+export async function updatePartAction(code: string, updates: { code?: string; name?: string; price?: number }) {
+    const { sheets, sheetId } = await getSheetClient();
 
-        const requests = [];
+    const rowIndex = await findRowIndexByCode(sheets, sheetId, code);
+    const sheet1RowIndexes = await findAllRowSheet1BarangIndexByCode(sheets, sheetId, code);
 
-        if (updates.price !== undefined) {
-            requests.push({
-                range: `Data Barang!F${rowIndex}`,
-                values: [[updates.price]]
+    if (!rowIndex) throw new Error(`Barang dengan code ${code} tidak ditemukan.`);
+
+    const requestsSheet1 = [];
+    const requestsBarang = [];
+
+    for (const r of sheet1RowIndexes) {
+        if (updates.code !== undefined) {
+            requestsSheet1.push({
+                range: `Sheet1!D${r}`,
+                values: [[updates.code]]
             });
         }
-
-        if (requests.length === 0) {
-            throw new Error('Tidak ada field yang diupdate');
+        if (updates.name !== undefined) {
+            requestsSheet1.push({
+                range: `Sheet1!E${r}`,
+                values: [[updates.name]]
+            });
         }
+    }
 
+    if (requestsSheet1.length) {
         await sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: sheetId,
-            requestBody: {
-                data: requests,
-                valueInputOption: 'USER_ENTERED'
-            }
+            requestBody: { data: requestsSheet1, valueInputOption: 'USER_ENTERED' }
         });
-
-        return { success: true };
-    } catch (error) {
-        console.error('Error updating part:', error);
-        throw new Error(`Gagal mengupdate data barang: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+
+    // === UPDATE DATA BARANG ===
+    if (updates.price !== undefined) {
+        requestsBarang.push({
+            range: `Data Barang!F${rowIndex}`,
+            values: [[updates.price]]
+        });
+    }
+    if (updates.code !== undefined) {
+        requestsBarang.push({
+            range: `Data Barang!A${rowIndex}`,
+            values: [[updates.code]]
+        });
+    }
+    if (updates.name !== undefined) {
+        requestsBarang.push({
+            range: `Sheet1!E${rowIndex}`,
+            values: [[updates.name]]
+        });
+    }
+
+    if (requestsBarang.length) {
+        await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: sheetId,
+            requestBody: { data: requestsBarang, valueInputOption: 'USER_ENTERED' }
+        });
+    }
+
+    return { success: true };
 }
+
 
 export async function addPartAction(item: { code: string; name: string; price: number }) {
     try {
         const { sheets, sheetId } = await getSheetClient();
-        
+
         // Check if code already exists
         const existingRowIndex = await findRowIndexByCode(sheets, sheetId, item.code);
         if (existingRowIndex) {
             throw new Error(`Barang dengan kode ${item.code} sudah ada.`);
         }
 
-        // Get the current data to find the next empty row
+        // Get current data to find the next empty row
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
             range: 'Data Barang!A:F',
