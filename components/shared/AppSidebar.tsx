@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Clock, Wrench, Package, Users, LogOut, Shield, Settings, UserCheck } from "lucide-react";
+import { FileText, Clock, Wrench, Package, Users, LogOut, Shield, Settings, UserCheck, Receipt, BookOpen, Building, ShoppingCart, DollarSign, CreditCard, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
     SidebarMenuItem,
     SidebarMenuButton,
     SidebarFooter,
+    SidebarTrigger,
+    useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -50,22 +52,58 @@ const menuItems = [
         group: "master",
     },
     {
-        title: "Manajemen User",
-        icon: UserCheck,
-        href: "/rbac/users",
-        group: "rbac",
-    },
-    {
-        title: "Manajemen Role",
-        icon: Shield,
-        href: "/rbac/roles",
-        group: "rbac",
-    },
-    {
-        title: "Manajemen Permission",
+        title: "Pengaturan Mekanik",
         icon: Settings,
-        href: "/rbac/permissions",
-        group: "rbac",
+        href: "/pengaturan-mekanik",
+        group: "master",
+    },
+    {
+        title: "Data Supplier",
+        icon: Building,
+        href: "/data-supplier",
+        group: "master",
+    },
+    {
+        title: "Data Tipe Pembayaran",
+        icon: DollarSign,
+        href: "/data-tipe-pembayaran",
+        group: "master",
+    },
+    {
+        title: "Pembelian",
+        icon: ShoppingCart,
+        href: "/pembelian",
+        group: "pembelian",
+    },
+    {
+        title: "Retur Pembelian",
+        icon: Package,
+        href: "/retur-pembelian",
+        group: "pembelian",
+    },
+    {
+        title: "Hutang Pembelian",
+        icon: Receipt,
+        href: "/hutang-pembelian",
+        group: "pembelian",
+    },
+    {
+        title: "Laporan Pembelian",
+        icon: FileText,
+        href: "/laporan-pembelian",
+        group: "pembelian",
+    },
+    {
+        title: "Laporan Keuangan",
+        icon: BookOpen,
+        href: "/laporan-keuangan",
+        group: "laporan",
+    },
+    {
+        title: "Laporan Performa Mekanik",
+        icon: BarChart3,
+        href: "/laporan-performa-mekanik",
+        group: "laporan",
     },
 ];
 
@@ -75,16 +113,19 @@ export function AppSidebar() {
 
     const transaksiMenu = menuItems.filter(item => item.group === "transaksi");
     const masterMenu = menuItems.filter(item => item.group === "master");
+    const pembelianMenu = menuItems.filter(item => item.group === "pembelian");
+    const laporanMenu = menuItems.filter(item => item.group === "laporan");
     const rbacMenu = menuItems.filter(item => item.group === "rbac");
 
     return (
-        <Sidebar>
+        <Sidebar collapsible="icon">
             <SidebarHeader className="border-b border-sidebar-border p-4">
                 <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm">
+                    <SidebarTrigger className="-ml-1" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0">
                         SS
                     </div>
-                    <div>
+                    <div className="transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0">
                         <h2 className="text-sm font-semibold">Sunda Service</h2>
                         <p className="text-xs text-muted-foreground">Invoice System</p>
                     </div>
@@ -128,10 +169,10 @@ export function AppSidebar() {
                 </SidebarGroup>
 
                 <SidebarGroup>
-                    <SidebarGroupLabel>Manajemen Akses</SidebarGroupLabel>
+                    <SidebarGroupLabel>Pembelian</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {rbacMenu.map((item) => (
+                            {pembelianMenu.map((item) => (
                                 <SidebarMenuItem key={item.href}>
                                     <SidebarMenuButton asChild isActive={pathname === item.href}>
                                         <Link href={item.href}>
@@ -144,6 +185,25 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+
+                <SidebarGroup>
+                    <SidebarGroupLabel>Laporan</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {laporanMenu.map((item) => (
+                                <SidebarMenuItem key={item.href}>
+                                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                                        <Link href={item.href}>
+                                            <item.icon className="w-4 h-4" />
+                                            <span>{item.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
             </SidebarContent>
             <SidebarFooter className="border-t border-sidebar-border p-4">
                 <Button

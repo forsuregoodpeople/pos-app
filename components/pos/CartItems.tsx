@@ -24,6 +24,8 @@ interface CartItemsProps {
     onCustomerClick: () => void;
     onMechanicClick: () => void;
     onCheckout: () => void;
+    onSaveCart?: () => void;
+    onLoadSavedCart?: () => void;
     isMobile?: boolean;
     maxStocks?: { [key: string]: number };
 }
@@ -46,6 +48,8 @@ export function CartItems({
     onCustomerClick,
     onMechanicClick,
     onCheckout,
+    onSaveCart,
+    onLoadSavedCart,
     isMobile = false,
     maxStocks = {},
 }: CartItemsProps) {
@@ -178,9 +182,9 @@ export function CartItems({
                     <div className="flex items-center justify-between text-white">
                         <div className="flex items-center gap-3">
                             <div>
-                                <div className="text-xs opacity-90">No. Transaksi</div>
+                                <div className="text-xs opacity-90">Plat Nomor</div>
                                 <div className="font-mono font-bold text-sm">
-                                    {invoiceNumber}
+                                    {customer.platNomor || '-'}
                                 </div>
                             </div>
                         </div>
@@ -197,11 +201,9 @@ export function CartItems({
                         <User className="w-4 h-4 text-blue-600" />
                         <div className="flex-1 text-left">
                             <div className="font-medium text-gray-800">
-                                {customer.name || "Pelanggan"}
+                                Tambah Pelanggan
                             </div>
-                            {customer.phone && (
-                                <div className="text-xs text-gray-600">{customer.phone}</div>
-                            )}
+                            <div className="text-xs text-gray-600">{invoiceNumber}</div>
                         </div>
                         <Edit2 className="w-4 h-4 text-gray-400" />
                     </button>
@@ -294,14 +296,35 @@ export function CartItems({
                         </div>
                     </div>
 
-                    <button
-                        onClick={onCheckout}
-                        disabled={cart.length === 0}
-                        className={`w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold ${isMobile ? "py-4 text-base" : "py-4 text-lg"} rounded-lg transition-colors flex items-center justify-center gap-2`}
-                    >
-                        <Printer className="w-5 h-5" />
-                        Checkout & Cetak
-                    </button>
+                    <div className="flex gap-1">
+                        {onSaveCart && (
+                            <button
+                                onClick={onSaveCart}
+                                disabled={cart.length === 0}
+                                className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 text-xs rounded transition-colors flex items-center justify-center gap-1"
+                            >
+                                <ShoppingCart className="w-3 h-3" />
+                                Simpan
+                            </button>
+                        )}
+                        {onLoadSavedCart && (
+                            <button
+                                onClick={onLoadSavedCart}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 text-xs rounded transition-colors flex items-center justify-center gap-1"
+                            >
+                                <ShoppingCart className="w-3 h-3" />
+                                Muat
+                            </button>
+                        )}
+                        <button
+                            onClick={onCheckout}
+                            disabled={cart.length === 0}
+                            className={`flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium ${isMobile ? "py-3 text-sm" : "py-2 text-xs"} rounded transition-colors flex items-center justify-center gap-1`}
+                        >
+                            <Printer className="w-3 h-3" />
+                            Checkout
+                        </button>
+                    </div>
                 </div>
             </div>
 

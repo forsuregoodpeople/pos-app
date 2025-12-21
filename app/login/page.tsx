@@ -89,9 +89,27 @@ export default function LoginPage() {
             </form>
             
             <div className="mt-4 text-sm text-gray-600">
-              <p>Default Superadmin:</p>
-              <p>Email: sunds.admin@gmail.com</p>
-              <p>Password: superadmin_password123</p>
+              <p className="font-semibold mb-2">Default Login Credentials:</p>
+              
+              <div className="mb-3 p-2 bg-blue-50 rounded">
+                <p className="font-medium text-blue-800">Superadmin:</p>
+                <p>Email: {process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL}</p>
+                <p>Password: {process.env.NEXT_PUBLIC_SUPERADMIN_PASSWORD}</p>
+              </div>
+              
+              <div className="mb-3 p-2 bg-green-50 rounded">
+                <p className="font-medium text-green-800">Admin:</p>
+                <p>Email: {process.env.NEXT_PUBLIC_ADMIN_EMAIL}</p>
+                <p>Password: {process.env.NEXT_PUBLIC_ADMIN_PASSWORD}</p>
+              </div>
+              
+              <div className="mb-3 p-2 bg-yellow-50 rounded">
+                <p className="font-medium text-yellow-800">Karyawan:</p>
+                <p>Email: {process.env.NEXT_PUBLIC_KARYAWAN_EMAIL}</p>
+                <p>Password: {process.env.NEXT_PUBLIC_KARYAWAN_PASSWORD}</p>
+              </div>
+              
+              <p className="text-xs text-orange-600 mt-2">⚠️ Email confirmation required. Check Supabase Dashboard if login fails.</p>
             </div>
           </CardContent>
         </Card>

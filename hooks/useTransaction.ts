@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CartItem } from './useCart';
 import { CustomerInfo } from './useCustomer';
-import { 
-    getTransactionsAction, 
+import {
+    getTransactionsAction,
     saveTransactionAction,
+    updateTransactionAction,
     deleteTransactionAction,
 } from '@/services/data-transaksi/data-transaksi';
 import { updateStockAction } from '@/services/data-barang/data-barang';
@@ -103,6 +104,23 @@ export function useTransaction() {
         }
     };
 
+    const updateTransaction = async (invoiceNumber: string, transaction: Transaction) => {
+        setError(null);
+        
+        try {
+            const updatedTransaction = await updateTransactionAction(invoiceNumber, transaction);
+            setTransactions(prev =>
+                prev.map(t => t.invoiceNumber === invoiceNumber ? updatedTransaction : t)
+            );
+            return updatedTransaction;
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Gagal mengupdate transaksi.";
+            setError(errorMessage);
+            console.error('Update transaction error:', err);
+            throw err;
+        }
+    };
+
     return {
         invoiceNumber,
         date,
@@ -111,6 +129,7 @@ export function useTransaction() {
         loading,
         error,
         deleteTransaction,
+        updateTransaction,
         reload: loadTransactions,
     };
 }

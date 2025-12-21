@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter, Printer, Hash, Package } from "lucide-react";
+import { Clock, Search, Car, Phone, Calendar, Receipt, Eye, Filter, Printer, Hash, Package, Wrench, Edit2 } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useTransaction, Transaction } from "@/hooks/useTransaction";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ export default function HistoryPage() {
     const [endDate, setEndDate] = useState<string>("");
     const [printTransaction, setPrintTransaction] = useState<Transaction | null>(null);
     const [printKeterangan, setPrintKeterangan] = useState<string>("");
+    const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
 
     const { transactions, loading } = useTransaction();
     const filteredTransactions = useTransactionFilters(
@@ -30,7 +31,22 @@ export default function HistoryPage() {
         dateFilter,
         startDate,
         endDate
-    );
+    ).filter(transaction => {
+        if (itemTypeFilter === "all") return true;
+        if (itemTypeFilter === "service") {
+            return transaction.items.some(item => item.type === "service") &&
+                   !transaction.items.some(item => item.type === "part");
+        }
+        if (itemTypeFilter === "part") {
+            return transaction.items.some(item => item.type === "part") &&
+                   !transaction.items.some(item => item.type === "service");
+        }
+        if (itemTypeFilter === "mixed") {
+            return transaction.items.some(item => item.type === "service") &&
+                   transaction.items.some(item => item.type === "part");
+        }
+        return true;
+    });
 
     const formatDate = (dateString: string) => {
         try {
@@ -70,6 +86,24 @@ export default function HistoryPage() {
         return transaction.items.reduce((total, item) => total + item.qty, 0);
     };
 
+    const getGroupedItems = (transaction: Transaction) => {
+        const services = transaction.items.filter(item => item.type === "service");
+        const parts = transaction.items.filter(item => item.type === "part");
+        
+        return {
+            services: {
+                count: services.length,
+                totalQty: services.reduce((total, item) => total + item.qty, 0),
+                items: services
+            },
+            parts: {
+                count: parts.length,
+                totalQty: parts.reduce((total, item) => total + item.qty, 0),
+                items: parts
+            }
+        };
+    };
+
     return (
         <SidebarInset className="font-sans">
             <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
@@ -78,68 +112,132 @@ export default function HistoryPage() {
             </header>
 
             <div className="p-4 md:p-6">
-                {/* Search and Filter Bar */}
-                <div className="mb-6 flex flex-col md:flex-row gap-3 md:gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                            placeholder="Cari nama, plat nomor, atau no. transaksi..."
-                        />
+                {/* Filter Section */}
+                <div className="mb-6 space-y-4">
+                    {/* Item Type Filter Tabs */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-1">
+                        <div className="flex flex-wrap gap-1">
+                            <button
+                                onClick={() => setItemTypeFilter("all")}
+                                className={`flex-1 min-w-[120px] px-4 py-2.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                                    itemTypeFilter === "all"
+                                        ? "bg-blue-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Receipt className="w-4 h-4" />
+                                    <span>Semua</span>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setItemTypeFilter("service")}
+                                className={`flex-1 min-w-[120px] px-4 py-2.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                                    itemTypeFilter === "service"
+                                        ? "bg-blue-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Wrench className="w-4 h-4" />
+                                    <span>Hanya Jasa</span>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setItemTypeFilter("part")}
+                                className={`flex-1 min-w-[120px] px-4 py-2.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                                    itemTypeFilter === "part"
+                                        ? "bg-blue-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <Package className="w-4 h-4" />
+                                    <span>Hanya Barang</span>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setItemTypeFilter("mixed")}
+                                className={`flex-1 min-w-[120px] px-4 py-2.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                                    itemTypeFilter === "mixed"
+                                        ? "bg-blue-600 text-white shadow-sm"
+                                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                }`}
+                            >
+                                <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-0.5">
+                                        <Wrench className="w-3.5 h-3.5" />
+                                        <Package className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span>Campuran</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-                        <div className="relative">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
-                            <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
-                                <SelectTrigger className="pl-10 w-full sm:w-44 text-sm h-10">
-                                    <SelectValue placeholder="Tipe Pelanggan" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all" className="text-sm">Semua Tipe</SelectItem>
-                                    <SelectItem value="umum" className="text-sm">Umum</SelectItem>
-                                    <SelectItem value="perusahaan" className="text-sm">Perusahaan</SelectItem>
-                                </SelectContent>
-                            </Select>
+                    {/* Search and Filter Bar */}
+                    <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                placeholder="Cari nama, plat nomor, atau no. transaksi..."
+                            />
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-                            <Select value={dateFilter} onValueChange={(value) => {
-                                setDateFilter(value);
-                                setStartDate("");
-                                setEndDate("");
-                            }}>
-                                <SelectTrigger className="w-full sm:w-44 text-sm h-10">
-                                    <SelectValue placeholder="Filter Tanggal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all" className="text-sm">Semua Waktu</SelectItem>
-                                    <SelectItem value="today" className="text-sm">Hari Ini</SelectItem>
-                                    <SelectItem value="week" className="text-sm">7 Hari Terakhir</SelectItem>
-                                    <SelectItem value="month" className="text-sm">Bulan Ini</SelectItem>
-                                    <SelectItem value="year" className="text-sm">Tahun Ini</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="relative">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                                <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
+                                    <SelectTrigger className="pl-10 w-full sm:w-44 text-sm h-10">
+                                        <SelectValue placeholder="Tipe Pelanggan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all" className="text-sm">Semua Tipe</SelectItem>
+                                        <SelectItem value="umum" className="text-sm">Umum</SelectItem>
+                                        <SelectItem value="perusahaan" className="text-sm">Perusahaan</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-md text-sm h-10"
-                                    placeholder="Dari"
-                                />
-                                <span className="text-gray-500 text-sm">s/d</span>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-md text-sm h-10"
-                                    placeholder="Sampai"
-                                />
+                            <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+                                <Select value={dateFilter} onValueChange={(value) => {
+                                    setDateFilter(value);
+                                    setStartDate("");
+                                    setEndDate("");
+                                }}>
+                                    <SelectTrigger className="w-full sm:w-44 text-sm h-10">
+                                        <SelectValue placeholder="Filter Tanggal" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all" className="text-sm">Semua Waktu</SelectItem>
+                                        <SelectItem value="today" className="text-sm">Hari Ini</SelectItem>
+                                        <SelectItem value="week" className="text-sm">7 Hari Terakhir</SelectItem>
+                                        <SelectItem value="month" className="text-sm">Bulan Ini</SelectItem>
+                                        <SelectItem value="year" className="text-sm">Tahun Ini</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-md text-sm h-10"
+                                        placeholder="Dari"
+                                    />
+                                    <span className="text-gray-500 text-sm">s/d</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-md text-sm h-10"
+                                        placeholder="Sampai"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -253,20 +351,33 @@ export default function HistoryPage() {
                                             </td>
                                             <td className="px-4 py-3.5">
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Package className="w-4 h-4 text-gray-400" />
-                                                            <span className="text-sm font-medium text-gray-900">
-                                                                {transaction.items.length} item
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Hash className="w-4 h-4 text-gray-400" />
-                                                        <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
-                                                            {getTotalItems(transaction)} qty
-                                                        </span>
-                                                    </div>
+                                                    {(() => {
+                                                        const grouped = getGroupedItems(transaction);
+                                                        return (
+                                                            <>
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Wrench className="w-4 h-4 text-blue-500" />
+                                                                        <span className="text-sm font-medium text-gray-900">
+                                                                            Jasa: {grouped.services.count}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Package className="w-4 h-4 text-green-500" />
+                                                                        <span className="text-sm font-medium text-gray-900">
+                                                                            Barang: {grouped.parts.count}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Hash className="w-4 h-4 text-gray-400" />
+                                                                    <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
+                                                                        Total: {getTotalItems(transaction)} qty
+                                                                    </span>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3.5">
@@ -292,6 +403,18 @@ export default function HistoryPage() {
                                                     >
                                                         <Printer className="w-4 h-4" />
                                                         Print
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            // Store transaction data in localStorage for editing
+                                                            localStorage.setItem('editTransaction', JSON.stringify(transaction));
+                                                            // Redirect to POS page
+                                                            window.location.href = '/pos';
+                                                        }}
+                                                        className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors font-medium"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                        Edit
                                                     </button>
                                                 </div>
                                             </td>
@@ -361,38 +484,63 @@ export default function HistoryPage() {
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                                    <Package className="w-4 h-4" />
-                                                    <span>{transaction.items.length} item</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-sm">
-                                                    <Hash className="w-4 h-4 text-gray-500" />
-                                                    <span className="font-semibold text-blue-700">
-                                                        {getTotalItems(transaction)} qty
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => setSelectedTransaction(transaction)}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                    Detail
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setPrintTransaction(transaction);
-                                                        setPrintKeterangan(transaction.keterangan || '');
-                                                    }}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
-                                                >
-                                                    <Printer className="w-4 h-4" />
-                                                    Print
-                                                </button>
-                                            </div>
+                                        <div className="pt-2 border-t">
+                                            {(() => {
+                                                const grouped = getGroupedItems(transaction);
+                                                return (
+                                                    <div className="space-y-2">
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                                                    <Wrench className="w-4 h-4 text-blue-500" />
+                                                                    <span>Jasa: {grouped.services.count}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                                                    <Package className="w-4 h-4 text-green-500" />
+                                                                    <span>Barang: {grouped.parts.count}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-sm">
+                                                                <Hash className="w-4 h-4 text-gray-500" />
+                                                                <span className="font-semibold text-blue-700">
+                                                                    Total: {getTotalItems(transaction)} qty
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => setSelectedTransaction(transaction)}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+                                                            >
+                                                                <Eye className="w-4 h-4" />
+                                                                Detail
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setPrintTransaction(transaction);
+                                                                    setPrintKeterangan(transaction.keterangan || '');
+                                                                }}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
+                                                            >
+                                                                <Printer className="w-4 h-4" />
+                                                                Print
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    // Store transaction data in localStorage for editing
+                                                                    localStorage.setItem('editTransaction', JSON.stringify(transaction));
+                                                                    // Redirect to POS page
+                                                                    window.location.href = '/pos';
+                                                                }}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                                Edit
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

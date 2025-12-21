@@ -6,8 +6,11 @@ export interface Part {
     code: string;
     name: string;
     price: number;
+    purchase_price?: number;
     quantity?: number;
     type?: 'mutasi' | 'bengkel';
+    category?: string;
+    image?: string;
 }
 
 export function useProducts() {

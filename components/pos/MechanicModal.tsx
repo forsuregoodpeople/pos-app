@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, Percent, Trash2, Search } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { User, Percent, Trash2, Search, Building, Info } from "lucide-react";
 import { useDataMekanik } from "@/hooks/useDataMekanik";
+import { useMechanicSettings } from "@/hooks/useMechanicSettings";
 import {
     Dialog,
     DialogContent,
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export interface Mechanic {
     id: string;
@@ -35,7 +37,33 @@ export function MechanicModal({
 }: MechanicModalProps) {
     const [localMechanics, setLocalMechanics] = useState<Mechanic[]>(mechanics);
     const [searchQuery, setSearchQuery] = useState("");
+    const [defaultShopCut, setDefaultShopCut] = useState("50");
+    const [mechanicShopCuts, setMechanicShopCuts] = useState<Record<string, number>>({});
+    
     const { items: availableMechanics } = useDataMekanik();
+    const { getGlobalSetting, getMechanicSetting } = useMechanicSettings();
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            const defaultCut = await getGlobalSetting('default_shop_cut_percentage');
+            if (defaultCut) setDefaultShopCut(defaultCut);
+        };
+        loadSettings();
+    }, [getGlobalSetting]);
+
+    useEffect(() => {
+        const loadMechanicSettings = async () => {
+            const settings: Record<string, number> = {};
+            for (const mechanic of localMechanics) {
+                const setting = await getMechanicSetting(parseInt(mechanic.id));
+                if (setting) {
+                    settings[mechanic.id] = setting.shop_cut_percentage;
+                }
+            }
+            setMechanicShopCuts(settings);
+        };
+        loadMechanicSettings();
+    }, [localMechanics, getMechanicSetting]);
 
     const getDefaultPercentages = (count: number): number[] => {
         if (count === 1) return [100];
@@ -48,7 +76,7 @@ export function MechanicModal({
         return [51, ...Array(count - 1).fill(splitPercentage)];
     };
 
-    const selectMechanic = (mechanic: { id: string; name: string }) => {
+    const selectMechanic = async (mechanic: { id: string; name: string }) => {
         const newCount = localMechanics.length + 1;
         const percentages = getDefaultPercentages(newCount);
         const updatedMechanics = localMechanics.map((existingMechanic, index) => ({
@@ -62,6 +90,15 @@ export function MechanicModal({
         };
         setLocalMechanics([...updatedMechanics, newMechanic]);
         setSearchQuery("");
+
+        // Load mechanic setting for new mechanic
+        const setting = await getMechanicSetting(parseInt(mechanic.id));
+        if (setting) {
+            setMechanicShopCuts(prev => ({
+                ...prev,
+                [mechanic.id]: setting.shop_cut_percentage
+            }));
+        }
     };
 
     const updateMechanic = (id: string, field: keyof Mechanic, value: string | number) => {
@@ -100,7 +137,10 @@ export function MechanicModal({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto no-print">
                 <DialogHeader>
-                    <DialogTitle>Data Mekanik</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        <User className="w-5 h-5" />
+                        Data Mekanik
+                    </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                     <div>
@@ -162,40 +202,49 @@ export function MechanicModal({
                                 <p className="text-xs mt-1">Cari dan pilih mekanik dari daftar di atas</p>
                             </div>
                         ) : (
-                            localMechanics.map((mechanic, index) => (
-                                <div key={mechanic.id} className="border rounded-lg p-3 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-blue-600" />
-                                            <span className="text-sm font-semibold text-gray-700">
-                                                {mechanic.name}
-                                            </span>
+                            localMechanics.map((mechanic, index) => {
+                                const shopCutPercentage = mechanicShopCuts[mechanic.id] || parseFloat(defaultShopCut);
+                                return (
+                                    <div key={mechanic.id} className="border rounded-lg p-3 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <User className="w-4 h-4 text-blue-600" />
+                                                <span className="text-sm font-semibold text-gray-700">
+                                                    {mechanic.name}
+                                                </span>
+                                                <Badge variant="outline" className="text-xs">
+                                                    Potongan: {shopCutPercentage}%
+                                                </Badge>
+                                            </div>
+                                            <button
+                                                onClick={() => removeMechanic(mechanic.id)}
+                                                className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => removeMechanic(mechanic.id)}
-                                            className="text-red-500 hover:bg-red-50 p-1 rounded"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase (%)</Label>
-                                        <div className="relative mt-2">
-                                            <Input
-                                                id={`mechanic-percentage-${mechanic.id}`}
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={mechanic.percentage}
-                                                onChange={(e) => updateMechanic(mechanic.id, "percentage", parseInt(e.target.value) || 0)}
-                                                placeholder="0"
-                                                className="pr-8"
-                                            />
-                                            <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        <div>
+                                            <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase Komisi (%)</Label>
+                                            <div className="relative mt-2">
+                                                <Input
+                                                    id={`mechanic-percentage-${mechanic.id}`}
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    value={mechanic.percentage}
+                                                    onChange={(e) => updateMechanic(mechanic.id, "percentage", parseInt(e.target.value) || 0)}
+                                                    placeholder="0"
+                                                    className="pr-8"
+                                                />
+                                                <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            </div>
+                                            <div className="text-xs text-gray-600 mt-1">
+                                                Komisi: {mechanic.percentage}% dari sisa setelah potongan toko ({shopCutPercentage}%)
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
 

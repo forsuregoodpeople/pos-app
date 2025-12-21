@@ -24,6 +24,18 @@ export function useCart() {
         return item.name;
     };
 
+    const addToCartWithQty = (item: { id: string; name: string; price: number; qty?: number; discount?: number }, type: "service" | "part") => {
+        const existingItem = cart.find(c => c.id === item.id);
+        if (existingItem) {
+            setCart(cart.map(c =>
+                c.id === item.id ? { ...c, qty: item.qty || 1, discount: item.discount || 0 } : c
+            ));
+        } else {
+            setCart([...cart, { ...item, type, qty: item.qty || 1, discount: item.discount || 0 }]);
+        }
+        return item.name;
+    };
+
     const removeFromCart = (id: string) => {
         setCart(cart.filter(c => c.id !== id));
     };
@@ -72,6 +84,7 @@ export function useCart() {
     return {
         cart,
         addToCart,
+        addToCartWithQty,
         removeFromCart,
         updateQty,
         updatePrice,

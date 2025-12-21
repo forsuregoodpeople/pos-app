@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, History } from "lucide-react";
 
 interface TabsProps {
     activeTab: "services" | "parts";
@@ -10,9 +10,10 @@ interface TabsProps {
     onTabChange: (tab: "services" | "parts") => void;
     onToggleFullscreen?: () => void;
     isFullscreen?: boolean;
+    onEditTransaction?: () => void;
 }
 
-export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChange, onToggleFullscreen, isFullscreen = false }: TabsProps) {
+export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChange, onToggleFullscreen, isFullscreen = false, onEditTransaction }: TabsProps) {
     return (
         <div className="bg-white border-b shrink-0">
             <div className="flex justify-center items-center">
@@ -36,6 +37,15 @@ export function TabsComponent({ activeTab, servicesCount, partsCount, onTabChang
                 >
                     Barang ({partsCount})
                 </button>
+                {onEditTransaction && (
+                    <button
+                        onClick={onEditTransaction}
+                        className="p-3 text-orange-600 hover:bg-orange-50 transition-colors"
+                        title="Edit Transaksi"
+                    >
+                        <History className="w-5 h-5" />
+                    </button>
+                )}
                 {onToggleFullscreen && (
                     <button
                         onClick={onToggleFullscreen}

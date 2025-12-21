@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { Transaction } from '@/hooks/useTransaction';
+import { calculateCommissionForMechanicsAction, CommissionCalculation } from '@/services/mechanic-settings/mechanic-settings';
 
 interface TransactionRow {
     id: number;
@@ -103,7 +104,36 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
             throw new Error(`Invoice number ${transaction.invoiceNumber} sudah ada.`);
         }
 
-        // Insert transaction
+        // Calculate mechanic commissions with shop cut
+        let mechanicCommissions: CommissionCalculation[] = [];
+        if (transaction.customer.mekaniks && transaction.customer.mekaniks.length > 0) {
+            try {
+                const mechanicIds = transaction.customer.mekaniks.map((m: any) => m.id);
+                const mechanicPercentages = transaction.customer.mekaniks.map((m: any) => ({
+                    mechanic_id: m.id,
+                    percentage: m.percentage
+                }));
+                
+                mechanicCommissions = await calculateCommissionForMechanicsAction(
+                    mechanicIds,
+                    transaction.total,
+                    mechanicPercentages
+                );
+            } catch (commissionError) {
+                console.error('Error calculating commissions:', commissionError);
+                // Continue with transaction even if commission calculation fails
+            }
+        }
+
+        // Insert transaction with commission data
+        // Note: mechanic_commissions is tracked in the mechanic_performance table instead
+        
+        // Validate customer_tipe - must be 'umum' or 'perusahaan'
+        const validCustomerTipes = ['umum', 'perusahaan'];
+        const customerTipe = validCustomerTipes.includes(transaction.customer.tipe) 
+            ? transaction.customer.tipe 
+            : 'umum';
+        
         const { error: insertError } = await supabase
             .from('data_transaksi')
             .insert({
@@ -114,7 +144,7 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                 customer_km_masuk: transaction.customer.kmMasuk,
                 customer_mobil: transaction.customer.mobil,
                 customer_plat_nomor: transaction.customer.platNomor,
-                customer_tipe: transaction.customer.tipe || 'umum',
+                customer_tipe: customerTipe,
                 customer_mekanik: transaction.customer.mekanik || '',
                 customer_mekaniks: transaction.customer.mekaniks || [],
                 items: transaction.items,
@@ -126,6 +156,38 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
         if (insertError) {
             console.error('Error saving transaction:', insertError);
             throw new Error(`Gagal menyimpan transaksi: ${insertError.message}`);
+        }
+
+        // Also save to mechanic_performance table for tracking
+        if (mechanicCommissions.length > 0) {
+            try {
+                const performanceRecords = mechanicCommissions.map(commission => ({
+                    mechanic_id: commission.mechanic_id,
+                    transaction_id: transaction.invoiceNumber,
+                    transaction_date: transaction.date,
+                    service_type: 'service' as const,
+                    service_name: 'Transaction Commission',
+                    quantity: 1,
+                    unit_price: commission.final_commission_amount,
+                    total_price: commission.final_commission_amount,
+                    commission_rate: commission.mechanic_commission_percentage,
+                    commission_amount: commission.final_commission_amount,
+                    performance_score: Math.min(100, Math.max(0, commission.mechanic_commission_percentage * 1.5)), // Simple performance score calculation
+                    notes: `Shop cut: ${commission.shop_cut_percentage}%, Final commission: ${commission.final_commission_amount}`
+                }));
+
+                const { error: performanceError } = await supabase
+                    .from('mechanic_performance')
+                    .insert(performanceRecords);
+
+                if (performanceError) {
+                    console.error('Error saving mechanic performance:', performanceError);
+                    // Don't fail the transaction if performance tracking fails
+                }
+            } catch (performanceError) {
+                console.error('Error saving mechanic performance:', performanceError);
+                // Don't fail the transaction if performance tracking fails
+            }
         }
 
         return transaction;
