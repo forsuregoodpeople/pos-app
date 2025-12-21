@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nota Sunda Service - Invoice System
+
+Sistem invoice/POS untuk bengkel otomotif dengan database MySQL.
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Database**: MySQL (semua data: barang, jasa, mekanik, transaksi)
+- **Authentication**: Cookie-based dengan 24-hour timeout
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install Dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Setup Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy file template environment:
+```bash
+cp env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `.env.local` dan isi dengan nilai yang sesuai. Lihat [ENV_SETUP.md](./ENV_SETUP.md) untuk panduan lengkap.
+
+**Environment Variables yang diperlukan:**
+- MySQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+
+**Catatan:** Semua data sekarang disimpan di MySQL, tidak lagi menggunakan Google Sheets.
+
+### 3. Setup Database
+
+Buat database MySQL:
+```bash
+mysql -u root -p < database/schema.sql
+```
+
+### 4. Migrasi Data (Opsional)
+
+Jika Anda punya data di Google Sheets dan ingin memigrasikannya ke MySQL:
+```bash
+# Migrasi langsung dari Google Sheets
+pnpm run migrate:sheets
+
+# Atau migrasi dari CSV
+pnpm run migrate:csv
+```
+
+Lihat [database/MIGRATION_GUIDE.md](./database/MIGRATION_GUIDE.md) untuk detail lebih lanjut.
+
+### 5. Run Development Server
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser.
+
+**Default Login:**
+- Username: `admin`
+- Password: `admin`
+
+## Features
+
+- ✅ Point of Sale (POS) dengan cart management
+- ✅ Manajemen stock barang (MySQL)
+- ✅ Manajemen data jasa, mekanik (MySQL)
+- ✅ History transaksi dengan filter dan pencarian
+- ✅ Print invoice/receipt
+- ✅ Customer management dengan history
+- ✅ Mechanic commission tracking
+- ✅ Responsive design (mobile + desktop)
+
+## Project Structure
+
+```
+nota-app/
+├── app/                    # Next.js app router pages
+│   ├── (dashboard)/        # Dashboard routes (protected)
+│   │   ├── pos/           # Point of Sale
+│   │   ├── history/       # Transaction history
+│   │   ├── data-barang/   # Parts management
+│   │   ├── data-jasa/     # Services management
+│   │   └── data-mekanik/  # Mechanics management
+│   └── login/             # Login page
+├── components/             # React components
+├── hooks/                  # Custom React hooks
+├── services/               # Backend services
+│   ├── data-barang/       # Parts service (MySQL)
+│   ├── data-jasa/         # Services service (MySQL)
+│   ├── data-mekanik/      # Mechanics service (MySQL)
+│   └── data-transaksi/    # Transactions service (MySQL)
+├── lib/                    # Utilities
+│   └── db.ts              # MySQL connection
+└── database/              # Database scripts
+    ├── schema.sql         # Database schema
+    └── migrate-*.ts       # Migration scripts
+```
+
+## Documentation
+
+- [ENV_SETUP.md](./ENV_SETUP.md) - Panduan setup environment variables
+- [database/README.md](./database/README.md) - Setup database MySQL
+- [database/MIGRATION_GUIDE.md](./database/MIGRATION_GUIDE.md) - Panduan migrasi data
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Tailwind CSS](https://tailwindcss.com)
+- [shadcn/ui](https://ui.shadcn.com)
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Important:** Set all environment variables in Vercel dashboard before deploying.

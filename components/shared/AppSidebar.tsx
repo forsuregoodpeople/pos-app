@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Clock, Wrench, Package, Users, LogOut } from "lucide-react";
+import { FileText, Clock, Wrench, Package, Users, LogOut, Shield, Settings, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,24 @@ const menuItems = [
         href: "/data-mekanik",
         group: "master",
     },
+    {
+        title: "Manajemen User",
+        icon: UserCheck,
+        href: "/rbac/users",
+        group: "rbac",
+    },
+    {
+        title: "Manajemen Role",
+        icon: Shield,
+        href: "/rbac/roles",
+        group: "rbac",
+    },
+    {
+        title: "Manajemen Permission",
+        icon: Settings,
+        href: "/rbac/permissions",
+        group: "rbac",
+    },
 ];
 
 export function AppSidebar() {
@@ -57,6 +75,7 @@ export function AppSidebar() {
 
     const transaksiMenu = menuItems.filter(item => item.group === "transaksi");
     const masterMenu = menuItems.filter(item => item.group === "master");
+    const rbacMenu = menuItems.filter(item => item.group === "rbac");
 
     return (
         <Sidebar>
@@ -95,6 +114,24 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {masterMenu.map((item) => (
+                                <SidebarMenuItem key={item.href}>
+                                    <SidebarMenuButton asChild isActive={pathname === item.href}>
+                                        <Link href={item.href}>
+                                            <item.icon className="w-4 h-4" />
+                                            <span>{item.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                <SidebarGroup>
+                    <SidebarGroupLabel>Manajemen Akses</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {rbacMenu.map((item) => (
                                 <SidebarMenuItem key={item.href}>
                                     <SidebarMenuButton asChild isActive={pathname === item.href}>
                                         <Link href={item.href}>

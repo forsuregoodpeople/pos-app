@@ -7,6 +7,7 @@ export interface Part {
     name: string;
     price: number;
     quantity?: number;
+    type?: 'mutasi' | 'bengkel';
 }
 
 export function useProducts() {

@@ -1,149 +1,142 @@
 'use server'
 
-import { google } from 'googleapis';
-import { GoogleAuth } from '../google/googleAuthService';
+import { supabase } from '@/lib/supabase';
 import { DataJasa } from '@/hooks/useDataJasa';
 
-
-const getSheetClient = async () => {
-    const sheetJasa = process.env.SHEET_JASA as string;
-    if (!sheetJasa) {
-        throw new Error('SHEET_JASA environment variable is not set');
-    }
-    const { auth, sheetId } = await GoogleAuth(sheetJasa);
-
-    const sheets = google.sheets({ version: 'v4', auth: auth as any });
-    return { sheets, sheetId };
-};
-
-const findRowIndexById = async (sheets: any, sheetId: string, id: string): Promise<number | null> => {
-    const res = await sheets.spreadsheets.values.get({
-        spreadsheetId: sheetId,
-        range: 'Data Jasa!A:B',
-    });
-
-    const rows = res.data.values || [];
-    const index = rows.findIndex((row: string[]) => row[0] === id.split('_')[0]);
-
-    return index !== -1 ? index + 1 : null;
-};
-
+interface DataJasaRow {
+    id: number;
+    name: string;
+    price: number;
+    created_at: string;
+    updated_at: string;
+}
 
 export async function getJasaAction(): Promise<DataJasa[]> {
     try {
-        const { sheets, sheetId } = await getSheetClient();
+        const { data, error } = await supabase
+            .from('data_jasa')
+            .select('*')
+            .order('name', { ascending: true });
 
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: sheetId,
-            range: 'Data Jasa!A:B',
-        });
-
-        const rows = response.data.values ? response.data.values.slice(1) : [];
-
-        if (rows.length === 0) {
-            return [];
+        if (error) {
+            console.error('Error fetching jasa from Supabase:', error);
+            throw new Error(`Gagal mengambil data dari database: ${error.message}`);
         }
 
-        const validJasa = rows.map((row, index) => {
-            if (!row[0] || !row[1]) {
-                return null;
-            }
+        const jasa: DataJasa[] = (data as DataJasaRow[]).map((row) => ({
+            id: row.id.toString(),
+            name: row.name,
+            price: Number(row.price),
+        }));
 
-            const sheetRowIndex = index + 2;
-
-            return {
-                id: `${row[0]}_${sheetRowIndex}`,
-                name: row[0],
-                price: Number(row[1]?.replace(/[^0-9.-]+/g, "")) || 0
-            };
-        }).filter(Boolean) as DataJasa[];
-
-        return validJasa;
+        return jasa;
     } catch (error) {
-        console.error('Error fetching jasa from Google Sheets:', error);
-        throw new Error(`Gagal mengambil data dari Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Error fetching jasa from Supabase:', error);
+        throw new Error(`Gagal mengambil data dari database: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
 export async function updateJasaAction(jasa: DataJasa) {
     try {
-        const { sheets, sheetId } = await getSheetClient();
+        const id = Number.parseInt(jasa.id);
+        if (Number.isNaN(id)) {
+            throw new TypeError(`ID Jasa tidak valid: ${jasa.id}`);
+        }
 
-        const rowIndex = await findRowIndexById(sheets, sheetId, jasa.id);
-        if (!rowIndex) throw new Error(`Jasa dengan ID ${jasa.id} tidak ditemukan di Sheet.`);
+        // Check if jasa exists
+        const { data: existingRows, error } = await supabase
+            .from('data_jasa')
+            .select('id')
+            .eq('id', id);
 
-        await sheets.spreadsheets.values.update({
-            spreadsheetId: sheetId,
-            range: `Data Jasa!A${rowIndex}:B${rowIndex}`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [[jasa.name, jasa.price]]
-            }
-        });
+        if (error) {
+            console.error('Error checking existing jasa:', error);
+            throw new Error(`Gagal memeriksa jasa: ${error.message}`);
+        }
+
+        if (existingRows.length === 0) {
+            throw new Error(`Jasa dengan ID ${jasa.id} tidak ditemukan.`);
+        }
+
+        // Update jasa
+        const { error: updateError } = await supabase
+            .from('data_jasa')
+            .update({ name: jasa.name, price: jasa.price })
+            .eq('id', id);
+
+        if (updateError) {
+            console.error('Error updating jasa:', updateError);
+            throw new Error(`Gagal update data: ${updateError.message}`);
+        }
 
         return { success: true };
     } catch (error) {
-        console.error('Server Action Update Error:', error);
-        throw new Error(`Gagal update data di Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Error updating jasa:', error);
+        throw new Error(`Gagal update data di database: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
 export async function deleteJasaAction(id: string) {
     try {
-        const { sheets, sheetId } = await getSheetClient();
+        const jasaId = Number.parseInt(id);
+        if (Number.isNaN(jasaId)) {
+            throw new TypeError(`ID Jasa tidak valid: ${id}`);
+        }
 
-        const rowIndex = await findRowIndexById(sheets, sheetId, id);
-        if (!rowIndex) throw new Error(`Jasa dengan ID ${id} tidak ditemukan untuk dihapus.`);
+        // Check if jasa exists
+        const { data: existingRows, error } = await supabase
+            .from('data_jasa')
+            .select('id')
+            .eq('id', jasaId);
 
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: sheetId,
-            requestBody: {
-                requests: [{
-                    deleteDimension: {
-                        range: {
-                            sheetId: 0,
-                            dimension: 'ROWS',
-                            startIndex: rowIndex - 1,
-                            endIndex: rowIndex
-                        }
-                    }
-                }]
-            }
-        });
+        if (error) {
+            console.error('Error checking existing jasa:', error);
+            throw new Error(`Gagal memeriksa jasa: ${error.message}`);
+        }
+
+        if (existingRows.length === 0) {
+            throw new Error(`Jasa dengan ID ${id} tidak ditemukan untuk dihapus.`);
+        }
+
+        // Delete jasa
+        const { error: deleteError } = await supabase
+            .from('data_jasa')
+            .delete()
+            .eq('id', jasaId);
+
+        if (deleteError) {
+            console.error('Error deleting jasa:', deleteError);
+            throw new Error(`Gagal menghapus jasa: ${deleteError.message}`);
+        }
 
         return { success: true };
     } catch (error) {
         console.error('Server Action Delete Error:', error);
-        throw new Error(`Gagal menghapus data dari Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error(`Gagal menghapus data dari database: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
 export async function addJasaAction(jasa: DataJasa): Promise<DataJasa> {
     try {
-        const { sheets, sheetId } = await getSheetClient();
+        // Insert new jasa
+        const { data, error } = await supabase
+            .from('data_jasa')
+            .insert({ name: jasa.name, price: jasa.price })
+            .select()
+            .single();
 
-        const response = await sheets.spreadsheets.values.append({
-            spreadsheetId: sheetId,
-            range: 'Data Jasa!A:B',
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [[jasa.name, jasa.price]]
-            }
-        });
-
-        if (response.data.updates && response.data.updates.updatedRows) {
-            const newRowIndex = response.data.updates.updatedRows;
-            const newId = `${jasa.name}_${newRowIndex - 1}`;
-
-            return {
-                ...jasa,
-                id: newId
-            };
+        if (error) {
+            console.error('Error adding jasa:', error);
+            throw new Error(`Gagal menambah jasa: ${error.message}`);
         }
 
-        throw new Error('Failed to add jasa to Google Sheets');
+        return {
+            id: data.id.toString(),
+            name: data.name,
+            price: data.price,
+        };
     } catch (error) {
         console.error('Server Action Add Error:', error);
-        throw new Error(`Gagal menambah data ke Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error(`Gagal menambah data ke database: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }

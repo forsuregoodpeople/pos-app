@@ -6,31 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulasi delay untuk loading
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Validasi login
-    if (username === 'admin' && password === 'admin') {
-      // Simpan session ke cookies untuk middleware
-      document.cookie = `isLoggedIn=true; path=/; max-age=${24 * 60 * 60}`; // 24 hours
-      document.cookie = `loginTime=${new Date().toISOString()}; path=/; max-age=${24 * 60 * 60}`;
+    try {
+      const result = await login(email, password);
       
-      toast.success('Login berhasil!');
-      
-      // Redirect ke halaman utama
-      window.location.href = '/';
-    } else {
-      toast.error('Username atau password salah!');
+      if (result.success) {
+        toast.success('Login berhasil!');
+        router.push('/');
+      } else {
+        toast.error('Login gagal: ' + (result.error || 'Terjadi kesalahan'));
+      }
+    } catch (error) {
+      toast.error('Login gagal: ' + (error as Error).message);
     }
 
     setIsLoading(false);
@@ -48,19 +48,19 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
-              Masukkan username dan password untuk mengakses sistem
+              Masukkan email dan password untuk mengakses sistem
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Masukkan username"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Masukkan email"
                   required
                   disabled={isLoading}
                 />
@@ -79,14 +79,20 @@ export default function LoginPage() {
                 />
               </div>
               
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? 'Memproses...' : 'Login'}
               </Button>
             </form>
+            
+            <div className="mt-4 text-sm text-gray-600">
+              <p>Default Superadmin:</p>
+              <p>Email: sunds.admin@gmail.com</p>
+              <p>Password: superadmin_password123</p>
+            </div>
           </CardContent>
         </Card>
       </div>

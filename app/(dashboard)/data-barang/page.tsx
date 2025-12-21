@@ -1,20 +1,30 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useDataBarang } from "@/hooks/useDataBarang";
-import { useProducts } from "@/hooks/useProducts";
+import { useDataBarang, DataBarang } from "@/hooks/useDataBarang";
 import { DataTable } from "@/components/shared/DataTable";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Printer } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, Printer, Plus } from "lucide-react";
+import { addPartAction } from "@/services/data-barang/data-barang";
+import { toast } from "sonner";
 
 export default function DataBarangPage() {
-    const { items, loading, updateItem, deleteItem, error } = useDataBarang();
+    const { items, loading, updateItem, deleteItem, reload } = useDataBarang();
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('all');
+    const [activeTab, setActiveTab] = useState("mutasi");
     const [isClient, setIsClient] = useState(false);
+    
+    // Add Modal State
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [newItem, setNewItem] = useState({ code: '', name: '', price: 0 });
+    const [isAdding, setIsAdding] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
@@ -27,25 +37,31 @@ export default function DataBarangPage() {
         { key: 'price' as const, label: 'Harga', type: 'number' as const, editable: true },
     ];
 
-    const filteredItems = items.filter(item => {
-        const matchesSearch = searchTerm === '' || 
-            item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.name.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesStock = stockFilter === 'all' ||
-            (stockFilter === '0' && item.quantity === 0) ||
-            (stockFilter === 'less5' && item.quantity < 5) ||
-            (stockFilter === 'most' && item.quantity >= 10);
-        
-        return matchesSearch && matchesStock;
-    }).sort((a, b) => {
-        if (stockFilter === 'most') {
-            return b.quantity - a.quantity; // Sort by quantity descending for "most stock"
-        }
-        return 0; // Keep original order for other filters
-    });
+    const getFilteredItems = (type: string) => {
+        return items.filter(item => {
+            // Logic: if item.type is undefined/null, assume it is 'mutasi' for backward compatibility
+            const itemType = item.type || 'mutasi';
+            const matchesType = itemType === type;
+            
+            const matchesSearch = searchTerm === '' || 
+                item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.name.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesStock = stockFilter === 'all' ||
+                (stockFilter === '0' && item.quantity === 0) ||
+                (stockFilter === 'less5' && item.quantity < 5) ||
+                (stockFilter === 'most' && item.quantity >= 10);
+            
+            return matchesType && matchesSearch && matchesStock;
+        }).sort((a, b) => {
+            if (stockFilter === 'most') {
+                return b.quantity - a.quantity;
+            }
+            return 0;
+        });
+    };
 
-    const handlePrint = () => {
+    const handlePrint = (currentItems: DataBarang[]) => {
         const printContent = `
             <html>
                 <head>
@@ -61,12 +77,12 @@ export default function DataBarangPage() {
                     </style>
                 </head>
                 <body>
-                    <h1>LAPORAN DATA BARANG</h1>
+                    <h1>LAPORAN DATA BARANG (${activeTab === 'mutasi' ? 'MUTASI' : 'BENGKEL'})</h1>
                     <div class="filter-info">
                         <strong>Filter:</strong> ${stockFilter === 'all' ? 'Semua Data' : stockFilter === '0' ? 'Stok = 0' : stockFilter === 'less5' ? 'Stok < 5' : 'Stok Terbanyak (≥10)'}
                         ${searchTerm ? `<br><strong>Pencarian:</strong> "${searchTerm}"` : ''}
                         <br><strong>Tanggal:</strong> ${new Date().toLocaleDateString('id-ID')}
-                        <br><strong>Total Data:</strong> ${filteredItems.length} barang
+                        <br><strong>Total Data:</strong> ${currentItems.length} barang
                     </div>
                     <table>
                         <thead>
@@ -79,7 +95,7 @@ export default function DataBarangPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            ${filteredItems.map((item, index) => `
+                            ${currentItems.map((item, index) => `
                                 <tr>
                                     <td>${index + 1}</td>
                                     <td>${item.code}</td>
@@ -102,6 +118,34 @@ export default function DataBarangPage() {
         }
     };
 
+    const handleAddItem = async () => {
+        if (!newItem.code || !newItem.name) {
+            toast.error("Kode dan Nama Barang wajib diisi");
+            return;
+        }
+
+        const price = Number(newItem.price);
+
+        setIsAdding(true);
+        try {
+            await addPartAction({
+                code: newItem.code,
+                name: newItem.name,
+                price: price,
+                type: 'bengkel'
+            });
+            toast.success("Barang bengkel berhasil ditambahkan");
+            setIsAddOpen(false);
+            setNewItem({ code: '', name: '', price: 0 });
+            reload();
+        } catch (error) {
+            console.error(error);
+            toast.error(error instanceof Error ? error.message : "Gagal menambah barang");
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
     return (
         <SidebarInset>
             <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background px-4">
@@ -110,66 +154,141 @@ export default function DataBarangPage() {
             </header>
 
             <div className="p-6">
-                {/* Filters */}
-                <div className="mb-6 space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <Input
-                                    placeholder="Cari kode atau nama barang..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-                        {isClient && (
-                        <div className="w-full sm:w-48">
-                            <Select value={stockFilter} onValueChange={setStockFilter}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Filter Stok" />
-                                </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Stok</SelectItem>
-                            <SelectItem value="0">Stok = 0 (Habis)</SelectItem>
-                            <SelectItem value="less5">Stok &lt; 5 (Menipis)</SelectItem>
-                            <SelectItem value="most">Stok Terbanyak (≥10)</SelectItem>
-                        </SelectContent>
-                            </Select>
-                        </div>
-                        )}
-                        <Button onClick={handlePrint} className="whitespace-nowrap">
-                            <Printer className="w-4 h-4 mr-2" />
-                            Cetak
-                        </Button>
-                    </div>
-                    
-                    {/* Filter Summary */}
-                    <div className="text-sm text-gray-600">
-                        Menampilkan {filteredItems.length} dari {items.length} data barang
-                        {stockFilter !== 'all' && (
-                            <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
-                                {stockFilter === '0' ? 'Stok Habis' : stockFilter === 'less5' ? 'Stok Menipis' : 'Stok Terbanyak'}
-                            </span>
-                        )}
-                        {searchTerm && (
-                            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                                Pencarian: "{searchTerm}"
-                            </span>
-                        )}
-                    </div>
-                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="mb-4">
+                        <TabsTrigger value="mutasi">Barang Mutasi</TabsTrigger>
+                        <TabsTrigger value="bengkel">Barang Bengkel</TabsTrigger>
+                    </TabsList>
 
-                <DataTable
-                    items={filteredItems}
-                    loading={loading}
-                    onEdit={(id, item) => updateItem(id, item)}
-                    onDelete={(id) => deleteItem(id)}
-                    columns={columns}
-                    title="Data Barang"
-                />
+                    {/* Common Filters Area */}
+                    <div className="mb-6 space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <Input
+                                        placeholder="Cari kode atau nama barang..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
+                            {isClient && (
+                            <div className="w-full sm:w-48">
+                                <Select value={stockFilter} onValueChange={setStockFilter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filter Stok" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Stok</SelectItem>
+                                        <SelectItem value="0">Stok = 0 (Habis)</SelectItem>
+                                        <SelectItem value="less5">Stok &lt; 5 (Menipis)</SelectItem>
+                                        <SelectItem value="most">Stok Terbanyak (≥10)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            )}
+                            <Button onClick={() => handlePrint(getFilteredItems(activeTab))} variant="outline" className="whitespace-nowrap">
+                                <Printer className="w-4 h-4 mr-2" />
+                                Cetak
+                            </Button>
+                            
+                            {activeTab === 'bengkel' && (
+                                <Button onClick={() => setIsAddOpen(true)} className="whitespace-nowrap">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Tambah Barang
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    <TabsContent value="mutasi">
+                         <div className="text-sm text-gray-600 mb-4">
+                            Menampilkan {getFilteredItems('mutasi').length} data barang mutasi
+                         </div>
+                        <DataTable
+                            items={getFilteredItems('mutasi')}
+                            loading={loading}
+                            onEdit={(id, item) => updateItem(id, item)}
+                            onDelete={(id) => deleteItem(id)}
+                            columns={columns}
+                            title="Data Barang Mutasi"
+                        />
+                         <p className="text-xs text-muted-foreground mt-4">
+                            * Barang mutasi disinkronisasi dengan data Sheet1.
+                         </p>
+                    </TabsContent>
+
+                    <TabsContent value="bengkel">
+                        <div className="text-sm text-gray-600 mb-4">
+                            Menampilkan {getFilteredItems('bengkel').length} data barang bengkel
+                         </div>
+                        <DataTable
+                            items={getFilteredItems('bengkel')}
+                            loading={loading}
+                            onEdit={(id, item) => updateItem(id, item)}
+                            onDelete={(id) => deleteItem(id)}
+                            columns={columns}
+                            title="Data Barang Bengkel"
+                        />
+                         <p className="text-xs text-muted-foreground mt-4">
+                            * Barang bengkel dikelola secara manual (CRUD).
+                         </p>
+                    </TabsContent>
+                </Tabs>
             </div>
+
+            {/* Add Item Modal */}
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Tambah Barang Bengkel</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="code" className="text-right">
+                                Kode
+                            </Label>
+                            <Input
+                                id="code"
+                                value={newItem.code}
+                                onChange={(e) => setNewItem({ ...newItem, code: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                                Nama
+                            </Label>
+                            <Input
+                                id="name"
+                                value={newItem.name}
+                                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="price" className="text-right">
+                                Harga
+                            </Label>
+                            <Input
+                                id="price"
+                                type="number"
+                                value={newItem.price}
+                                onChange={(e) => setNewItem({ ...newItem, price: Number(e.target.value) })}
+                                className="col-span-3"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
+                        <Button onClick={handleAddItem} disabled={isAdding}>
+                            {isAdding ? 'Menyimpan...' : 'Simpan'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </SidebarInset>
     );
 }

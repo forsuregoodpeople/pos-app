@@ -338,6 +338,28 @@ const printStyles = `
     font-size: 11px !important;
     font-family: 'Courier New', monospace !important;
   }
+
+  /* Style untuk terbilang saat print tanpa border */
+  .terbilang-section {
+    font-size: 12px !important;
+    font-family: 'Courier New', monospace !important;
+    margin-top: 5px !important;
+    padding: 2px 0 !important;
+    border: none !important;
+    background: none !important;
+  }
+  
+  .terbilang-label {
+    font-size: 12px !important;
+    font-family: 'Courier New', monospace !important;
+    font-weight: bold !important;
+  }
+  
+  .terbilang-text {
+    font-size: 12px !important;
+    font-family: 'Courier New', monospace !important;
+    font-style: italic !important;
+  }
 }
 
 /* FONT KONSISTEN: Gunakan font yang sama untuk semua elemen */
@@ -633,6 +655,29 @@ const printStyles = `
   font-family: 'Courier New', monospace;
 }
 
+/* Style untuk terbilang tanpa border */
+.terbilang-section {
+  margin-top: 8px;
+  padding: 2px 0;
+  font-size: 13px;
+  line-height: 1.3;
+  font-family: 'Courier New', monospace;
+}
+
+.terbilang-label {
+  font-weight: bold;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  margin-right: 5px;
+}
+
+.terbilang-text {
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+}
+
 .signature-section {
   display: flex;
   justify-content: space-around;
@@ -771,6 +816,50 @@ const printStyles = `
 }
 `;
 
+// Fungsi untuk mengkonversi angka menjadi terbilang dalam bahasa Indonesia
+function terbilang(angka: number): string {
+  const bilangan = [
+    "", "Satu", "Dua", "Tiga", "Empat", "Lima",
+    "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh",
+    "Sebelas"
+  ];
+
+  // Konversi angka menjadi integer (bulat)
+  const angkaBulat = Math.floor(angka);
+
+  if (angkaBulat < 12) {
+    return bilangan[angkaBulat];
+  } else if (angkaBulat < 20) {
+    return terbilang(angkaBulat - 10) + " Belas";
+  } else if (angkaBulat < 100) {
+    const puluhan = Math.floor(angkaBulat / 10);
+    const sisa = angkaBulat % 10;
+    return terbilang(puluhan) + " Puluh" + (sisa > 0 ? " " + terbilang(sisa) : "");
+  } else if (angkaBulat < 200) {
+    return "Seratus" + (angkaBulat - 100 > 0 ? " " + terbilang(angkaBulat - 100) : "");
+  } else if (angkaBulat < 1000) {
+    const ratusan = Math.floor(angkaBulat / 100);
+    const sisa = angkaBulat % 100;
+    return terbilang(ratusan) + " Ratus" + (sisa > 0 ? " " + terbilang(sisa) : "");
+  } else if (angkaBulat < 2000) {
+    return "Seribu" + (angkaBulat - 1000 > 0 ? " " + terbilang(angkaBulat - 1000) : "");
+  } else if (angkaBulat < 1000000) {
+    const ribuan = Math.floor(angkaBulat / 1000);
+    const sisa = angkaBulat % 1000;
+    return terbilang(ribuan) + " Ribu" + (sisa > 0 ? " " + terbilang(sisa) : "");
+  } else if (angkaBulat < 1000000000) {
+    const jutaan = Math.floor(angkaBulat / 1000000);
+    const sisa = angkaBulat % 1000000;
+    return terbilang(jutaan) + " Juta" + (sisa > 0 ? " " + terbilang(sisa) : "");
+  } else if (angkaBulat < 1000000000000) {
+    const milyaran = Math.floor(angkaBulat / 1000000000);
+    const sisa = angkaBulat % 1000000000;
+    return terbilang(milyaran) + " Milyar" + (sisa > 0 ? " " + terbilang(sisa) : "");
+  }
+
+  return "Angka Terlalu Besar";
+}
+
 // Komponen ReceiptSection dan PrintReceipt dengan font konsisten
 interface PrintReceiptProps {
   invoiceNumber: string;
@@ -817,6 +906,8 @@ interface ReceiptData {
   dpp: string;
   biayaLain: string;
   grandTotal: string;
+  grandTotalNumber: number; // Tambah properti untuk angka (bukan string)
+  terbilang: string; // Tambah properti untuk terbilang
   garansi?: string;
   keterangan?: string;
 }
@@ -1006,6 +1097,14 @@ const ReceiptSection = ({ data, label }: { data: ReceiptData; label: string }) =
             <span>{data.grandTotal}</span>
           </div>
         </div>
+
+        {/* Terbilang tanpa border/kotak */}
+        <div className="terbilang-section">
+          <span className="terbilang-label">TERBILANG:</span>
+          <span className="terbilang-text">
+            {data.terbilang} Rupiah
+          </span>
+        </div>
       </div>
 
       {/* Keterangan Section */}
@@ -1091,6 +1190,12 @@ export function PrintReceipt({
     });
   };
 
+  // Hitung grand total
+  const grandTotalNumber = total + biayaLain;
+
+  // Konversi ke terbilang
+  const terbilangText = terbilang(grandTotalNumber);
+
   // Convert data to match ReceiptData interface
   const receiptData: ReceiptData = {
     nomor: invoiceNumber,
@@ -1130,7 +1235,9 @@ export function PrintReceipt({
     subtotalParts: `Rp ${cartParts.reduce((sum, item) => sum + ((item.price * item.qty) - item.discount), 0).toLocaleString('id-ID')}`,
     dpp: `Rp ${subtotal.toLocaleString('id-ID')}`,
     biayaLain: `Rp ${biayaLain.toLocaleString('id-ID')}`,
-    grandTotal: `Rp ${(total + biayaLain).toLocaleString('id-ID')}`,
+    grandTotal: `Rp ${grandTotalNumber.toLocaleString('id-ID')}`,
+    grandTotalNumber: grandTotalNumber, // Tambah properti untuk angka
+    terbilang: terbilangText, // Tambah properti terbilang
     garansi: 'Garansi 1 bulan untuk suku cadang dan 3 bulan untuk jasa perbaikan',
     keterangan: keterangan
   };

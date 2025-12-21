@@ -1,12 +1,17 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
+  user: User | null;
+  session: Session | null;
   isLoggedIn: boolean;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
-  checkAuth: () => boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<boolean>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,70 +29,104 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication status on mount
-    checkAuth();
-  }, []);
-
-  const checkAuth = (): boolean => {
-    // Check cookies instead of localStorage
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-      return undefined;
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     };
 
-    const loggedIn = getCookie('isLoggedIn') === 'true';
-    const loginTime = getCookie('loginTime');
-    
-    if (loggedIn && loginTime) {
-      const loginDate = new Date(loginTime);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - loginDate.getTime()) / (1000 * 60 * 60);
-      
-      // Auto logout after 24 hours
-      if (hoursDiff > 24) {
-        logout();
-        return false;
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-      
-      setIsLoggedIn(true);
-      return true;
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAuth = async (): Promise<boolean> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      return !!session;
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      return false;
     }
-    
-    setIsLoggedIn(false);
-    return false;
   };
 
-  const login = (username: string, password: string): boolean => {
-    if (username === 'admin' && password === 'admin') {
-      // Set cookies for 24 hours
-      const expires = new Date();
-      expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000));
-      
-      document.cookie = `isLoggedIn=true; path=/; expires=${expires.toUTCString()}`;
-      document.cookie = `loginTime=${new Date().toISOString()}; path=/; expires=${expires.toUTCString()}`;
-      
-      setIsLoggedIn(true);
-      return true;
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        // Set session cookies for middleware compatibility
+        const expires = new Date();
+        expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+        
+        document.cookie = `isLoggedIn=true; path=/; expires=${expires.toUTCString()}`;
+        document.cookie = `loginTime=${new Date().toISOString()}; path=/; expires=${expires.toUTCString()}`;
+        
+        return { success: true };
+      }
+
+      return { success: false, error: 'User tidak ditemukan' };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: 'Terjadi kesalahan saat login' };
     }
-    return false;
   };
 
-  const logout = () => {
-    // Clear cookies
-    document.cookie = 'isLoggedIn=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    document.cookie = 'loginTime=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-    
-    setIsLoggedIn(false);
-    window.location.href = '/login';
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      
+      // Clear cookies
+      document.cookie = 'isLoggedIn=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+      document.cookie = 'loginTime=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+      
+      setUser(null);
+      setSession(null);
+      
+      // Redirect to login page
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    session,
+    isLoggedIn: !!user,
+    login,
+    logout,
+    checkAuth,
+    loading,
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout, checkAuth }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

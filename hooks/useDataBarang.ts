@@ -13,6 +13,7 @@ export interface DataBarang {
     name: string;
     quantity: number;
     price: number;
+    type?: 'mutasi' | 'bengkel';
 }
 
 export function useDataBarang() {
@@ -32,6 +33,7 @@ export function useDataBarang() {
                     name: part.name,
                     quantity: part.quantity || 0,
                     price: part.price,
+                    type: part.type as 'mutasi' | 'bengkel',
                 }))
             );
         } catch (err) {
@@ -57,14 +59,18 @@ export function useDataBarang() {
             name: item.name || oldItem.name,
             quantity: item.quantity,
             price: item.price ?? oldItem.price,
+            type: item.type ?? oldItem.type,
         };
 
         setItems((prev) => prev.map((i) => (i.id === id ? updatedItem : i)));
 
         try {
-            const updates: { name?: string; price?: number } = {};
+            const updates: { name?: string; price?: number; code?: string } = {}; // Added code here just in case, though usually code update is sensitive
+             // Original logic:
             if (item.name && item.name !== oldItem.name) updates.name = item.name;
             if (item.price !== undefined && item.price !== oldItem.price) updates.price = item.price;
+            // Support code update if needed
+            if (item.code && item.code !== oldItem.code) updates.code = item.code;
 
             if (Object.keys(updates).length) {
                 await updatePartAction(oldItem.code, updates);
