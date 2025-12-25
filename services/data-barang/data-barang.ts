@@ -109,7 +109,7 @@ export async function updatePartAction(code: string, updates: { code?: string; n
             throw new Error(`Gagal memeriksa barang: ${error.message}`);
         }
 
-        if (existingRows.length === 0) {
+    if (existingRows.length === 0) {
             throw new Error(`Barang dengan code ${code} tidak ditemukan.`);
         }
 

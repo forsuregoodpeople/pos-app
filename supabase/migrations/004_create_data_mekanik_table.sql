@@ -22,6 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_data_mekanik_name ON data_mekanik(name);
 -- Trigger untuk data_mekanik
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_data_mekanik_updated_at ON data_mekanik;
 CREATE TRIGGER update_data_mekanik_updated_at BEFORE UPDATE ON data_mekanik FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
@@ -29,6 +30,7 @@ CREATE TRIGGER update_data_mekanik_updated_at BEFORE UPDATE ON data_mekanik FOR 
 -- ============================================
 
 ALTER TABLE data_mekanik ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all operations for data_mekanik" ON data_mekanik;
 CREATE POLICY "Enable all operations for data_mekanik" ON data_mekanik FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

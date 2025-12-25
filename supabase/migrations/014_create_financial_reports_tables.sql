@@ -100,10 +100,12 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_financial_reports_updated_at ON financial_reports;
 CREATE TRIGGER update_financial_reports_updated_at 
     BEFORE UPDATE ON financial_reports 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_chart_of_accounts_updated_at ON chart_of_accounts;
 CREATE TRIGGER update_chart_of_accounts_updated_at 
     BEFORE UPDATE ON chart_of_accounts 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -115,29 +117,37 @@ ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE journal_entry_lines ENABLE ROW LEVEL SECURITY;
 
 -- Policy for financial_reports
+DROP POLICY IF EXISTS "Authenticated users can view financial reports" ON financial_reports;
 CREATE POLICY "Authenticated users can view financial reports" ON financial_reports
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can modify financial reports" ON financial_reports;
 CREATE POLICY "Authenticated users can modify financial reports" ON financial_reports
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Policy for chart_of_accounts
+DROP POLICY IF EXISTS "Authenticated users can view chart of accounts" ON chart_of_accounts;
 CREATE POLICY "Authenticated users can view chart of accounts" ON chart_of_accounts
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can modify chart of accounts" ON chart_of_accounts;
 CREATE POLICY "Authenticated users can modify chart of accounts" ON chart_of_accounts
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Policy for journal_entries
+DROP POLICY IF EXISTS "Authenticated users can view journal entries" ON journal_entries;
 CREATE POLICY "Authenticated users can view journal entries" ON journal_entries
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can modify journal entries" ON journal_entries;
 CREATE POLICY "Authenticated users can modify journal entries" ON journal_entries
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Policy for journal_entry_lines
+DROP POLICY IF EXISTS "Authenticated users can view journal entry lines" ON journal_entry_lines;
 CREATE POLICY "Authenticated users can view journal entry lines" ON journal_entry_lines
     FOR SELECT USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Authenticated users can modify journal entry lines" ON journal_entry_lines;
 CREATE POLICY "Authenticated users can modify journal entry lines" ON journal_entry_lines
     FOR ALL USING (auth.role() = 'authenticated');

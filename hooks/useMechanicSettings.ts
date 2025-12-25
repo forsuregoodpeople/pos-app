@@ -78,7 +78,10 @@ export function useMechanicSettings() {
         }
     }, []);
 
-    const saveMechanicSetting = useCallback(async (setting: Omit<MechanicSetting, 'id' | 'created_at' | 'updated_at'>) => {
+    const saveMechanicSetting = useCallback(async (
+        setting: Omit<MechanicSetting, 'id' | 'created_at' | 'updated_at'>,
+        mechanicName?: string
+    ) => {
         setLoading(true);
         setError(null);
         try {
@@ -90,7 +93,7 @@ export function useMechanicSettings() {
                     updated[existingIndex] = { ...data, mechanic_name: prev[existingIndex].mechanic_name };
                     return updated;
                 }
-                return [...prev, { ...data, mechanic_name: 'New Mechanic' }];
+                return [...prev, { ...data, mechanic_name: mechanicName || 'New Mechanic' }];
             });
             return data;
         } catch (err: any) {

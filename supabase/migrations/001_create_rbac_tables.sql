@@ -92,8 +92,13 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers untuk updated_at (RBAC Tables)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 CREATE TRIGGER update_roles_updated_at BEFORE UPDATE ON roles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_permissions_updated_at ON permissions;
 CREATE TRIGGER update_permissions_updated_at BEFORE UPDATE ON permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
@@ -108,10 +113,19 @@ ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- Policies untuk RBAC Tables (sesuaikan dengan kebutuhan keamanan Anda)
+DROP POLICY IF EXISTS "Enable all operations for users" ON users;
 CREATE POLICY "Enable all operations for users" ON users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all operations for roles" ON roles;
 CREATE POLICY "Enable all operations for roles" ON roles FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all operations for permissions" ON permissions;
 CREATE POLICY "Enable all operations for permissions" ON permissions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all operations for role_permissions" ON role_permissions;
 CREATE POLICY "Enable all operations for role_permissions" ON role_permissions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all operations for user_roles" ON user_roles;
 CREATE POLICY "Enable all operations for user_roles" ON user_roles FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

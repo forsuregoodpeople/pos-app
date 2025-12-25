@@ -59,11 +59,12 @@ export default function PengaturanMekanikPage() {
         }
 
         try {
+            const mechanicName = mechanics?.find(m => m.id === selectedMechanic.toString())?.name;
             await saveMechanicSetting({
                 mechanic_id: selectedMechanic,
                 shop_cut_percentage: parseFloat(shopCutPercentage),
                 is_active: true
-            });
+            }, mechanicName);
             
             toast.success("Pengaturan mekanik berhasil ditambahkan");
             setShowAddModal(false);

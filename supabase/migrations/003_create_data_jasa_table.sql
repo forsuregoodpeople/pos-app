@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_data_jasa_name ON data_jasa(name);
 -- Trigger untuk data_jasa
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_data_jasa_updated_at ON data_jasa;
 CREATE TRIGGER update_data_jasa_updated_at BEFORE UPDATE ON data_jasa FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
@@ -30,6 +31,7 @@ CREATE TRIGGER update_data_jasa_updated_at BEFORE UPDATE ON data_jasa FOR EACH R
 -- ============================================
 
 ALTER TABLE data_jasa ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all operations for data_jasa" ON data_jasa;
 CREATE POLICY "Enable all operations for data_jasa" ON data_jasa FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

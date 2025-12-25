@@ -30,6 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_data_barang_name ON data_barang(name);
 -- Trigger untuk data_barang
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_data_barang_updated_at ON data_barang;
 CREATE TRIGGER update_data_barang_updated_at BEFORE UPDATE ON data_barang FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
@@ -37,6 +38,7 @@ CREATE TRIGGER update_data_barang_updated_at BEFORE UPDATE ON data_barang FOR EA
 -- ============================================
 
 ALTER TABLE data_barang ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all operations for data_barang" ON data_barang;
 CREATE POLICY "Enable all operations for data_barang" ON data_barang FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

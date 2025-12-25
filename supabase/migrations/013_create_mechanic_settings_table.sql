@@ -40,10 +40,12 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_mechanic_settings_updated_at ON mechanic_settings;
 CREATE TRIGGER update_mechanic_settings_updated_at 
     BEFORE UPDATE ON mechanic_settings 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_global_settings_updated_at ON global_settings;
 CREATE TRIGGER update_global_settings_updated_at 
     BEFORE UPDATE ON global_settings 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -53,18 +55,22 @@ ALTER TABLE mechanic_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE global_settings ENABLE ROW LEVEL SECURITY;
 
 -- Policy for mechanic_settings - only authenticated users can read
+DROP POLICY IF EXISTS "Authenticated users can view mechanic settings" ON mechanic_settings;
 CREATE POLICY "Authenticated users can view mechanic settings" ON mechanic_settings
     FOR SELECT USING (auth.role() = 'authenticated');
 
 -- Policy for mechanic_settings - only authenticated users can modify
+DROP POLICY IF EXISTS "Authenticated users can modify mechanic settings" ON mechanic_settings;
 CREATE POLICY "Authenticated users can modify mechanic settings" ON mechanic_settings
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Policy for global_settings - only authenticated users can read
+DROP POLICY IF EXISTS "Authenticated users can view global settings" ON global_settings;
 CREATE POLICY "Authenticated users can view global settings" ON global_settings
     FOR SELECT USING (auth.role() = 'authenticated');
 
 -- Policy for global_settings - only admin users can modify
+DROP POLICY IF EXISTS "Admin users can modify global settings" ON global_settings;
 CREATE POLICY "Admin users can modify global settings" ON global_settings
     FOR ALL USING (
         auth.role() = 'authenticated' 

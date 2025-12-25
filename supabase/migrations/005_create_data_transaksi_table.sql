@@ -38,6 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_data_transaksi_saved_at ON data_transaksi(saved_a
 -- Trigger untuk data_transaksi
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_data_transaksi_updated_at ON data_transaksi;
 CREATE TRIGGER update_data_transaksi_updated_at BEFORE UPDATE ON data_transaksi FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
@@ -45,6 +46,7 @@ CREATE TRIGGER update_data_transaksi_updated_at BEFORE UPDATE ON data_transaksi 
 -- ============================================
 
 ALTER TABLE data_transaksi ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all operations for data_transaksi" ON data_transaksi;
 CREATE POLICY "Enable all operations for data_transaksi" ON data_transaksi FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================

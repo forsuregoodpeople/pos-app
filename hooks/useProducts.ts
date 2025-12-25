@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPartsAction, deletePartAction } from '@/services/data-barang/data-barang';
+import { getDataBarangMutasiAction, DataBarangMutasi } from '@/services/data-barang/data-barang-mutasi';
 
 export interface Part {
     id: string;
@@ -22,9 +23,31 @@ export function useProducts() {
         setLoading(true);
         setError(null);
         try {
-            const remoteParts = await getPartsAction();
-            setParts(remoteParts);
-            return remoteParts;
+            // Fetch both data sources in parallel
+            const [remoteParts, mutations] = await Promise.all([
+                getPartsAction(),
+                getDataBarangMutasiAction()
+            ]);
+
+            // Flatten mutations into parts
+            const mutationParts: Part[] = mutations.flatMap(mutation => 
+                mutation.items.map((item, index) => ({
+                    id: `MUT-${mutation.transactionCode}-${item.id || index}`, // Ensure unique ID
+                    code: item.transactionCode, // Use transaction code as item code or keep it distinct
+                    name: `${item.itemName} (${mutation.customerName})`, // Valid for POS display
+                    price: parseFloat(item.priceCode || '0'), // Assuming priceCode is string number
+                    quantity: item.quantity,
+                    type: 'mutasi', // Explicitly mark as mutasi
+                    category: 'Mutasi',
+                    purchase_price: 0 // Optional default
+                }))
+            );
+
+            // Merge existing parts with mutation parts
+            const allParts = [...remoteParts, ...mutationParts];
+            
+            setParts(allParts);
+            return allParts;
         } catch (err: any) {
             const errorMessage = err?.message || 'Gagal sinkronisasi data dari Server.';
             setError(errorMessage);
@@ -73,7 +96,14 @@ export function useProducts() {
         const prevParts = parts; 
         try {
             setParts(prev => prev.filter(p => p.id !== id));
-            await deletePartAction(id);
+            // Check if it's a mutation part (starts with MUT-)
+            if (id.startsWith('MUT-')) {
+                // For now, we arguably can't delete single mutation items easily from here 
+                // without a specific action, so we might just warn or skip
+                console.warn('Deleting individual mutation items from POS is not fully supported yet in backend.');
+            } else {
+                await deletePartAction(id);
+            }
         } catch (err: any) {
             const errorMessage = err?.message || 'Gagal menghapus data.';
             setError(errorMessage);

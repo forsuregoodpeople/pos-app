@@ -251,13 +251,13 @@ export async function updateGlobalSettingAction(key: string, value: string): Pro
             .single();
 
         if (error) {
-            console.error('Error updating global setting:', error);
-            throw new Error('Gagal mengupdate pengaturan global');
+            console.error('SERVER ERROR: updateGlobalSettingAction Supabase error:', JSON.stringify(error, null, 2));
+            throw new Error(`Gagal mengupdate pengaturan global: ${error.message} (Code: ${error.code})`);
         }
         return data;
-    } catch (error) {
-        console.error('Error updating global setting:', error);
-        throw new Error('Gagal mengupdate pengaturan global');
+    } catch (error: any) {
+        console.error('SERVER ERROR: updateGlobalSettingAction Exception:', error);
+        throw new Error(`Gagal mengupdate pengaturan global: ${error.message || 'Unknown error'}`);
     }
 }
 
