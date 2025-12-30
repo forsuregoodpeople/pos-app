@@ -146,10 +146,12 @@ export async function deleteDataBarangMutasiAction(transactionCode: string): Pro
     }
 }
 
+
+
 export async function synchronizeStockAction(
     transactionCode: string, 
-    mode: 'add' | 'subtract' = 'add',
-    customQuantities?: Record<string, number>
+    mode: 'add' | 'subtract' | 'set' = 'add',
+    customUpdates?: Record<string, { quantity: number, itemName?: string }>
 ): Promise<{ success: boolean; count: number }> {
     try {
         // 1. Fetch items for this transaction
@@ -168,79 +170,45 @@ export async function synchronizeStockAction(
 
         let updatedCount = 0;
 
-        // 2. Update Master Stock (data_barang) for each item
-        // We match by name since code might not be available in mutation items or reliable
+        // 2. Update Transaction Items
         for (const item of items) {
-            // Use custom quantity if provided, otherwise use mutation quantity
-            const quantityToSync = customQuantities?.[item.item_name] ?? item.quantity;
+            // Get update data for this item (keyed by original item name)
+            const updateData = customUpdates?.[item.item_name];
             
-            console.log(`[SYNC] Processing: ${item.item_name}, Quantity to sync: ${quantityToSync}, Mode: ${mode}`);
-            
-            // Skip if custom quantity is 0 or negative
-            if (quantityToSync <= 0) {
-                console.log(`[SYNC] Skipping ${item.item_name} - quantity is ${quantityToSync}`);
-                continue;
-            }
-
-            // Get current quantity from transaction_mutation_items
+            // Determine new quantity using the 'set' logic or fallback to current
             const currentQty = item.quantity ?? 0;
-            const delta = mode === 'add' ? quantityToSync : -quantityToSync;
-            const newQty = Math.max(0, currentQty + delta);
+            let newQty = currentQty;
 
-            console.log(`[SYNC] ${item.item_name}: Current=${currentQty}, Delta=${delta}, New=${newQty}`);
+            // If we have an explicit update quantity, use it based on mode
+            if (updateData?.quantity !== undefined) {
+                if (mode === 'set') {
+                    newQty = updateData.quantity;
+                } else {
+                    const delta = mode === 'add' ? updateData.quantity : -updateData.quantity;
+                    newQty = Math.max(0, currentQty + delta);
+                }
+            }
+            
+            // Determine new name (or keep existing)
+            const newItemName = updateData?.itemName?.trim() || item.item_name;
 
-            // First, let's see what's actually in the database
-            const { data: checkData, error: checkError } = await supabase
+            console.log(`[SYNC] Updating Mutation Item ${item.item_name}: Qty=${currentQty}->${newQty}, Name=${item.item_name}->${newItemName}`);
+
+            const { error: updateError } = await supabase
                 .from('transaction_mutation_items')
-                .select('*')
-                .eq('transaction_code', transactionCode);
-
-            console.log(`[SYNC DEBUG] Database check for transaction ${transactionCode}:`, {
-                error: checkError,
-                totalRows: checkData?.length || 0,
-                items: checkData?.map(d => ({
-                    item_name: d.item_name,
-                    item_name_length: d.item_name?.length,
-                    item_name_bytes: JSON.stringify(d.item_name),
-                    quantity: d.quantity
-                }))
-            });
-
-            // Update quantity in transaction_mutation_items table
-            console.log(`[SYNC DEBUG] About to update:`, {
-                table: 'transaction_mutation_items',
-                transaction_code: transactionCode,
-                item_name: item.item_name,
-                item_name_length: item.item_name.length,
-                item_name_bytes: JSON.stringify(item.item_name),
-                old_quantity: currentQty,
-                new_quantity: newQty
-            });
-
-            const { data: updateResult, error: updateError } = await supabase
-                .from('transaction_mutation_items')
-                .update({ quantity: newQty })
+                .update({ 
+                    quantity: newQty,
+                    item_name: newItemName 
+                })
                 .eq('transaction_code', transactionCode)
-                .eq('item_name', item.item_name)
-                .select(); // Add select to see what was updated
-
-            console.log(`[SYNC DEBUG] Update result:`, {
-                success: !updateError,
-                rowsAffected: updateResult?.length || 0,
-                error: updateError,
-                data: updateResult
-            });
+                .eq('item_name', item.item_name);
 
             if (updateError) {
-                console.error(`[SYNC ERROR] Error updating quantity for ${item.item_name}:`, updateError);
+                console.error(`Error updating mutation item ${item.item_name}:`, updateError);
                 continue;
-            } else if (!updateResult || updateResult.length === 0) {
-                console.error(`[SYNC ERROR] No rows updated for ${item.item_name} - item might not exist or WHERE clause didn't match`);
-                continue;
-            } else {
-                console.log(`[SYNC SUCCESS] Updated ${item.item_name} from ${currentQty} to ${newQty} in transaction_mutation_items`);
-                updatedCount++;
             }
+
+            updatedCount++;
         }
 
         return { success: true, count: updatedCount };

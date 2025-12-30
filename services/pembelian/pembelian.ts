@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { adjustStockAction } from '@/services/data-barang/data-barang';
 
 export interface Supplier {
     id: string;
@@ -14,6 +15,7 @@ export interface Supplier {
 export interface PurchaseItem {
     id: string;
     purchase_id: string;
+    item_code?: string;
     item_name: string;
     item_type: 'part' | 'service' | 'other';
     quantity: number;
@@ -57,6 +59,7 @@ export interface PurchaseReturnItem {
     id: string;
     purchase_return_id: string;
     purchase_item_id: string;
+    item_code?: string;
     quantity: number;
     amount: number;
     created_at: string;
@@ -158,9 +161,10 @@ export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'crea
                 discount_amount: purchase.discount_amount,
                 final_amount: purchase.final_amount,
                 payment_status: purchase.payment_status,
+                payment_method: purchase.payment_method,
+                paid_amount: purchase.paid_amount,
                 due_date: purchase.due_date,
                 notes: purchase.notes,
-                created_by: purchase.created_by
             })
             .select()
             .single();
@@ -170,7 +174,8 @@ export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'crea
         // Insert purchase items
         const itemsWithPurchaseId = items.map(item => ({
             ...item,
-            purchase_id: purchaseData.id
+            purchase_id: purchaseData.id,
+            item_code: item.item_code
         }));
 
         const { error: itemsError } = await supabase
@@ -178,6 +183,20 @@ export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'crea
             .insert(itemsWithPurchaseId);
 
         if (itemsError) throw itemsError;
+
+        // Update Stock - Increment for each purchased item
+        for (const item of items) {
+            if (item.item_code) {
+                try {
+                    await adjustStockAction(item.item_code, item.quantity);
+                } catch (stockError: any) {
+                    console.warn(`Failed to update stock for ${item.item_code}:`, stockError?.message);
+                    // Don't fail the entire purchase if stock update fails
+                    // Log it but continue
+                }
+            }
+        }
+
 
         // Fetch the complete purchase with items
         const { data: completePurchase, error: fetchError } = await supabase
@@ -192,9 +211,15 @@ export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'crea
 
         if (fetchError) throw fetchError;
         return completePurchase;
-    } catch (error) {
-        console.error('Error creating purchase:', error);
-        throw new Error('Gagal menambah pembelian');
+    } catch (error: any) {
+        console.error('Error creating purchase:', {
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint,
+            code: error?.code,
+            fullError: error
+        });
+        throw new Error(`Gagal menambah pembelian: ${error?.message || 'Unknown error'}`);
     }
 }
 
@@ -239,7 +264,7 @@ export async function getPurchaseReturnsAction(): Promise<PurchaseReturn[]> {
                 purchase:purchases(id, invoice_number, purchase_date),
                 items:purchase_return_items(
                     *,
-                    purchase_item:purchase_items(id, item_name, item_type)
+                    purchase_item:purchase_items(id, item_name, item_type, item_code)
                 )
             `)
             .order('return_date', { ascending: false });
@@ -273,7 +298,8 @@ export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn
         // Insert return items
         const itemsWithReturnId = returnItems.map(item => ({
             ...item,
-            purchase_return_id: returnDataResult.id
+            purchase_return_id: returnDataResult.id,
+            item_code: item.item_code
         }));
 
         const { error: itemsError } = await supabase
@@ -281,6 +307,20 @@ export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn
             .insert(itemsWithReturnId);
 
         if (itemsError) throw itemsError;
+
+        // Update Stock - Decrement for each returned item
+        for (const item of returnItems) {
+            if (item.item_code) {
+                try {
+                    await adjustStockAction(item.item_code, -item.quantity);
+                } catch (stockError: any) {
+                    console.warn(`Failed to update stock for ${item.item_code}:`, stockError?.message);
+                    // Don't fail the entire return if stock update fails
+                    // Log it but continue
+                }
+            }
+        }
+
 
         // Fetch the complete return with items
         const { data: completeReturn, error: fetchError } = await supabase
@@ -290,7 +330,7 @@ export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn
                 purchase:purchases(id, invoice_number, purchase_date),
                 items:purchase_return_items(
                     *,
-                    purchase_item:purchase_items(id, item_name, item_type)
+                    purchase_item:purchase_items(id, item_name, item_type, item_code)
                 )
             `)
             .eq('id', returnDataResult.id)
@@ -298,9 +338,93 @@ export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn
 
         if (fetchError) throw fetchError;
         return completeReturn;
+    } catch (error: any) {
+        console.error('Error creating purchase return:', {
+            message: error?.message,
+            details: error?.details,
+            hint: error?.hint,
+            code: error?.code,
+            fullError: error
+        });
+        throw new Error(`Gagal menambah retur pembelian: ${error?.message || 'Unknown error'}`);
+    }
+}
+
+export async function updatePurchaseReturnAction(id: string, returnData: Partial<Omit<PurchaseReturn, 'id' | 'created_at' | 'purchase_id'>>, returnItems: Omit<PurchaseReturnItem, 'id' | 'purchase_return_id' | 'created_at'>[]): Promise<PurchaseReturn> {
+    try {
+        // Update header info
+        const { data: updatedReturn, error: updateError } = await supabase
+            .from('purchase_returns')
+            .update({
+                return_date: returnData.return_date,
+                reason: returnData.reason,
+                total_amount: returnData.total_amount,
+                notes: returnData.notes,
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        // Delete existing items
+        const { error: deleteError } = await supabase
+            .from('purchase_return_items')
+            .delete()
+            .eq('purchase_return_id', id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new items
+        const itemsWithReturnId = returnItems.map(item => ({
+            ...item,
+            purchase_return_id: id
+        }));
+
+        const { error: itemsError } = await supabase
+            .from('purchase_return_items')
+            .insert(itemsWithReturnId);
+
+        if (itemsError) throw itemsError;
+
+        // Fetch complete return
+        const { data: completeReturn, error: fetchError } = await supabase
+            .from('purchase_returns')
+            .select(`
+                *,
+                purchase:purchases(id, invoice_number, purchase_date),
+                items:purchase_return_items(
+                    *,
+                    purchase_item:purchase_items(id, item_name, item_type, item_code)
+                )
+            `)
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+        return completeReturn;
     } catch (error) {
-        console.error('Error creating purchase return:', error);
-        throw new Error('Gagal menambah retur pembelian');
+        console.error('Error updating purchase return:', error);
+        throw new Error('Gagal mengupdate retur pembelian');
+    }
+}
+
+export async function deletePurchaseReturnAction(id: string): Promise<void> {
+    try {
+        // Items will be deleted by cascade if configured, otherwise we should delete them first.
+        // Assuming cascade delete is set on the foreign key relation in DB.
+        // If not, we do explicit delete:
+        await supabase.from('purchase_return_items').delete().eq('purchase_return_id', id);
+
+        const { error } = await supabase
+            .from('purchase_returns')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('Error deleting purchase return:', error);
+        throw new Error('Gagal menghapus retur pembelian');
     }
 }
 

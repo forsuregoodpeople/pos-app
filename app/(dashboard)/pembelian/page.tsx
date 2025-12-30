@@ -10,13 +10,13 @@ import { useProducts } from "@/hooks/useProducts";
 import { useDataBarang } from "@/hooks/useDataBarang";
 import { usePurchaseTransaction } from "@/hooks/usePurchaseTransaction";
 import { useSuppliers } from "@/hooks/usePembelian";
+import { usePaymentTypes } from "@/hooks/usePaymentTypes";
 import { SupplierModal } from "@/components/pembelian/SupplierModal";
 import { PurchaseTabs } from "@/components/pembelian/PurchaseTabs";
 import { PurchaseCartItems } from "@/components/pembelian/PurchaseCartItems";
-import { PrintPurchaseReceipt } from "@/components/pembelian/PrintPurchaseReceipt";
 import { PurchaseProductGrid } from "@/components/pembelian/PurchaseProductGrid";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea"; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,9 @@ export default function PurchasePage() {
     const { supplier, updateSupplier, setSupplierFromHistory, clearSupplier, searchQuery, setSearchQuery } = useSupplierSelection();
     const { parts, loading: partsLoading, error: partsError } = useProducts();
     const { items: barangItems, loading: barangLoading, error: barangError } = useDataBarang();
-    const { date, savePurchase, loading: transactionLoading, error: transactionError } = usePurchaseTransaction();
+    const { date, setDate, savePurchase, loading: transactionLoading, error: transactionError } = usePurchaseTransaction();
     const { suppliers } = useSuppliers();
+    const { items: paymentTypes, loadPaymentTypes } = usePaymentTypes();
 
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [productSearchQuery, setProductSearchQuery] = useState("");
@@ -37,6 +38,9 @@ export default function PurchasePage() {
     const [isTablet, setIsTablet] = useState(false);
     const [keterangan, setKeterangan] = useState("");
     const [showKeteranganModal, setShowKeteranganModal] = useState(false);
+    const [selectedPaymentTypeId, setSelectedPaymentTypeId] = useState<string>("");
+    const [purchaseDate, setPurchaseDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('pending');
 
     const [invoiceNumber, setInvoiceNumber] = useState("PUR-LOADING");
     const [isClient, setIsClient] = useState(false);
@@ -44,12 +48,12 @@ export default function PurchasePage() {
     useEffect(() => {
         setIsClient(true);
         const d = new Date();
-        // Use timestamp instead of random to avoid hydration mismatch
         const timestamp = Date.now() % 1000;
         const newInvoiceNumber = `PUR-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(timestamp).padStart(3, "0")}`;
         setInvoiceNumber(newInvoiceNumber);
         
-        // Detect tablet/iPad
+        loadPaymentTypes();
+        
         const checkTablet = () => {
             const width = window.innerWidth;
             const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -60,7 +64,7 @@ export default function PurchasePage() {
         checkTablet();
         window.addEventListener('resize', checkTablet);
         return () => window.removeEventListener('resize', checkTablet);
-    }, []);
+    }, [loadPaymentTypes]);
 
     const toggleFullscreen = async () => {
         setIsFullscreen(v => {
@@ -89,8 +93,8 @@ export default function PurchasePage() {
         }
     };
 
-    const handleSelectSupplier = (historySupplier: any) => {
-        setSupplierFromHistory(historySupplier);
+    const handleSelectSupplier = (supplier: any) => {
+        updateSupplier(supplier);
         toast.success("Data supplier dipilih");
         setShowSupplierModal(false);
         setSearchQuery("");
@@ -106,19 +110,41 @@ export default function PurchasePage() {
     };
 
     const handleConfirmCheckout = async () => {
+        if (!supplier) return;
+
+        // Validation: If status is Paid, payment method is required
+        if (paymentStatus === 'paid' && !selectedPaymentTypeId) {
+            toast.error("Mohon pilih tipe pembayaran untuk status Lunas", { position: "bottom-left" });
+            return;
+        }
+
         try {
+            const keterangan = `Pembelian dari ${supplier.name}`;
             const subtotal = calculateSubtotal();
             const total = calculateTotal();
 
-            const saved = await savePurchase(supplier, cart, total, keterangan);
+            // Pass selectedPaymentTypeId to savePurchase
+            // If ID exists -> Paid, If empty -> Pending (Debt)
+            // Pass selectedPaymentTypeId to savePurchase
+            // If ID exists -> Paid, If empty -> Pending (Debt)
+            const saved = await savePurchase(
+                supplier, 
+                cart.map(item => ({...item, code: item.code})), // Ensure code is passed if savePurchase expects it, or if it uses the cart item directly
+                total, 
+                keterangan, 
+                selectedPaymentTypeId,
+                paymentStatus
+            );
+            
             if (!saved) throw new Error("save failed");
 
-            toast.success("Pembelian berhasil disimpan!", { position: "bottom-left" });
+            if (paymentStatus === 'paid') {
+                toast.success("Pembelian berhasil disimpan (Lunas)!", { position: "bottom-left" });
+            } else {
+                toast.success("Pembelian disimpan sebagai Hutang (Pending)!", { position: "bottom-left" });
+            }
 
-            const originalTitle = document.title;
-            document.title = `Nota_${invoiceNumber.replace(/\//g, "_")}`;
-            window.print();
-            document.title = originalTitle;
+            // removed print logic
 
             // reset state
             clearCart();
@@ -126,6 +152,8 @@ export default function PurchasePage() {
             setSearchQuery("");
             setKeterangan("");
             setShowKeteranganModal(false);
+            setPaymentStatus("pending");
+            setSelectedPaymentTypeId("");
 
             // reload page
             window.location.reload();
@@ -136,9 +164,21 @@ export default function PurchasePage() {
     };
 
     // Error handling
-    if (partsError || barangError || transactionError) {
-        console.error('Data loading errors:', { partsError, barangError, transactionError });
-    }
+    // Error logging
+    useEffect(() => {
+        const errors = {
+            partsError,
+            barangError,
+            transactionError
+        };
+        const activeErrors = Object.entries(errors)
+            .filter(([_, v]) => v)
+            .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+
+        if (Object.keys(activeErrors).length > 0) {
+            console.error('Data loading errors:', activeErrors);
+        }
+    }, [partsError, barangError, transactionError]);
 
     if (!isClient) {
         return (
@@ -175,12 +215,11 @@ export default function PurchasePage() {
                                     onSearchChange={setProductSearchQuery}
                                     onAddToCart={handleAddToCart}
                                     cartItems={cart}
-                                    isFullscreen={isFullscreen}
                                 />
                             </div>
                             
                             {/* Cart - Right Side */}
-                            <aside className="w-80 bg-white border-l flex flex-col shadow-lg">
+                            <aside className="w-96 bg-white border-l flex flex-col shadow-lg">
                                 <PurchaseCartItems
                                     cart={cart}
                                     supplier={supplier}
@@ -194,6 +233,13 @@ export default function PurchasePage() {
                                     onSupplierClick={() => setShowSupplierModal(true)}
                                     onCheckout={handleCheckout}
                                     isMobile={false}
+                                    paymentTypes={paymentTypes}
+                                    selectedPaymentTypeId={selectedPaymentTypeId}
+                                    onPaymentTypeChange={setSelectedPaymentTypeId}
+                                    purchaseDate={date}
+                                    onDateChange={setDate}
+                                    paymentStatus={paymentStatus}
+                                    onPaymentStatusChange={setPaymentStatus}
                                 />
                             </aside>
                         </div>
@@ -214,11 +260,9 @@ export default function PurchasePage() {
                                 onSearchChange={setProductSearchQuery}
                                 onAddToCart={handleAddToCart}
                                 cartItems={cart}
-                                isFullscreen={isFullscreen}
-                            />
-                        </div>
+                            /></div>
 
-                        <aside className="lg:w-80 bg-white border-l flex flex-col shadow-lg">
+                        <aside className="lg:w-96 bg-white border-l flex flex-col shadow-lg">
                             <PurchaseCartItems
                                 cart={cart}
                                 supplier={supplier}
@@ -232,6 +276,13 @@ export default function PurchasePage() {
                                 onSupplierClick={() => setShowSupplierModal(true)}
                                 onCheckout={handleCheckout}
                                 isMobile={false}
+                                paymentTypes={paymentTypes}
+                                selectedPaymentTypeId={selectedPaymentTypeId}
+                                onPaymentTypeChange={setSelectedPaymentTypeId}
+                                purchaseDate={date}
+                                onDateChange={setDate}
+                                paymentStatus={paymentStatus}
+                                onPaymentStatusChange={setPaymentStatus}
                             />
                         </aside>
 
@@ -268,6 +319,10 @@ export default function PurchasePage() {
                                 onSupplierClick={() => setShowSupplierModal(true)}
                                 onCheckout={handleCheckout}
                                 isMobile={true}
+                                purchaseDate={date}
+                                onDateChange={setDate}
+                                paymentStatus={paymentStatus}
+                                onPaymentStatusChange={setPaymentStatus}
                             />
                         </div>
                     </div>
@@ -305,22 +360,11 @@ export default function PurchasePage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowKeteranganModal(false)}>Batal</Button>
-                        <Button onClick={handleConfirmCheckout}>Proses & Cetak</Button>
+                        <Button onClick={handleConfirmCheckout}>Proses Pembelian</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <div className="print-only">
-                <PrintPurchaseReceipt
-                    invoiceNumber={invoiceNumber}
-                    date={date}
-                    supplier={supplier}
-                    items={cart}
-                    subtotal={calculateSubtotal()}
-                    total={calculateTotal()}
-                    keterangan={keterangan}
-                />
-            </div>
         </SidebarInset>
     );
 }

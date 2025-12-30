@@ -38,7 +38,7 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+      <DialogContent className="md:max-w-[600px] w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detail Transaksi</DialogTitle>
         </DialogHeader>
@@ -96,6 +96,12 @@ export const TransactionDetailModal = ({ transaction, isOpen, onClose }: Transac
                   <div>
                     <p className="text-sm text-gray-600">Mekanik</p>
                     <p className="font-medium">{transaction.customer.mekanik}</p>
+                  </div>
+                )}
+                {(transaction as any).paymentTypeName && (
+                  <div>
+                    <p className="text-sm text-gray-600">Tipe Pembayaran</p>
+                    <p className="font-medium">{(transaction as any).paymentTypeName}</p>
                   </div>
                 )}
               </div>

@@ -10,6 +10,8 @@ import {
     deletePurchaseAction,
     getPurchaseReturnsAction,
     createPurchaseReturnAction,
+    updatePurchaseReturnAction,
+    deletePurchaseReturnAction,
     generatePurchaseInvoiceNumber,
     Supplier,
     Purchase,
@@ -193,6 +195,29 @@ export function useReturPembelian() {
         }
     }, []);
 
+    const updateReturn = useCallback(async (id: string, returnData: Partial<Omit<PurchaseReturn, 'id' | 'created_at'>>, returnItems: any[]) => {
+        try {
+            const updatedReturn = await updatePurchaseReturnAction(id, returnData, returnItems);
+            setReturns(prev => prev.map(r => r.id === id ? updatedReturn : r));
+            return updatedReturn;
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Gagal mengupdate retur pembelian";
+            setError(errorMessage);
+            throw err;
+        }
+    }, []);
+
+    const deleteReturn = useCallback(async (id: string) => {
+        try {
+            await deletePurchaseReturnAction(id);
+            setReturns(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Gagal menghapus retur pembelian";
+            setError(errorMessage);
+            throw err;
+        }
+    }, []);
+
     useEffect(() => {
         loadReturns();
     }, [loadReturns]);
@@ -202,6 +227,8 @@ export function useReturPembelian() {
         loading,
         error,
         createReturn,
+        updateReturn,
+        deleteReturn,
         reload: loadReturns,
     };
 }

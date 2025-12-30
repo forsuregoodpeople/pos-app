@@ -96,7 +96,7 @@ export async function updateStockAction(items: CartItem[]): Promise<{ success: b
     }
 }
 
-export async function updatePartAction(code: string, updates: { code?: string; name?: string; price?: number; type?: 'mutasi' | 'bengkel' }) {
+export async function updatePartAction(code: string, updates: { code?: string; name?: string; price?: number; quantity?: number; type?: 'mutasi' | 'bengkel' }) {
     try {
         // Check if part exists
         const { data: existingRows, error } = await supabase
@@ -109,7 +109,7 @@ export async function updatePartAction(code: string, updates: { code?: string; n
             throw new Error(`Gagal memeriksa barang: ${error.message}`);
         }
 
-    if (existingRows.length === 0) {
+        if (existingRows.length === 0) {
             throw new Error(`Barang dengan code ${code} tidak ditemukan.`);
         }
 
@@ -146,6 +146,10 @@ export async function updatePartAction(code: string, updates: { code?: string; n
             updateData.price = updates.price;
         }
 
+        if (updates.quantity !== undefined && updates.quantity !== currentPart.quantity) {
+            updateData.quantity = updates.quantity;
+        }
+
         if (updates.type !== undefined && updates.type !== currentPart.type) {
             updateData.type = updates.type;
         }
@@ -172,7 +176,7 @@ export async function updatePartAction(code: string, updates: { code?: string; n
     }
 }
 
-export async function addPartAction(item: { code: string; name: string; price: number; type?: 'mutasi' | 'bengkel' }) {
+export async function addPartAction(item: { code: string; name: string; price: number; quantity?: number; type?: 'mutasi' | 'bengkel' }) {
     try {
         // Check if code already exists
         const { data: existingRows, error } = await supabase
@@ -190,14 +194,16 @@ export async function addPartAction(item: { code: string; name: string; price: n
         }
 
         // Insert new part
+        const initialQty = item.quantity || 0;
+
         const { error: insertError } = await supabase
             .from('data_barang')
             .insert({
                 code: item.code,
                 name: item.name,
                 category: '', // category (empty for now)
-                initial_quantity: 0, // initial_quantity
-                quantity: 0, // quantity (current stock)
+                initial_quantity: initialQty, // initial_quantity
+                quantity: initialQty, // quantity (current stock)
                 price: item.price,
                 type: item.type || 'mutasi'
             });
@@ -246,5 +252,36 @@ export async function deletePartAction(id: string) {
     } catch (error) {
         console.error('Server Action Delete Error:', error);
         throw new Error(`Gagal menghapus data dari database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+export async function adjustStockAction(code: string, delta: number) {
+    try {
+        const { data: currentRows, error } = await supabase
+            .from('data_barang')
+            .select('quantity')
+            .eq('code', code);
+
+        if (error) throw error;
+        if (!currentRows || currentRows.length === 0) {
+            // Item not found, ignore or warn. 
+            // For purchases of new items not in master, we can't update stock.
+            return;
+        }
+
+        const currentStock = currentRows[0].quantity;
+        const newStock = currentStock + delta;
+
+        const { error: updateError } = await supabase
+            .from('data_barang')
+            .update({ quantity: newStock })
+            .eq('code', code);
+
+        if (updateError) throw updateError;
+    } catch (error) {
+        console.error(`Error adjusting stock for ${code}:`, error);
+        // We generally shouldn't fail the whole transaction if stock update fails, but maybe log it.
+        // Or rethrow if strict consistency is required.
+        throw new Error(`Gagal update stok untuk ${code}`);
     }
 }

@@ -65,10 +65,11 @@ export function useDataBarang() {
         setItems((prev) => prev.map((i) => (i.id === id ? updatedItem : i)));
 
         try {
-            const updates: { name?: string; price?: number; code?: string } = {}; // Added code here just in case, though usually code update is sensitive
+            const updates: { name?: string; price?: number; code?: string; quantity?: number     } = {}; // Added code here just in case, though usually code update is sensitive
              // Original logic:
             if (item.name && item.name !== oldItem.name) updates.name = item.name;
             if (item.price !== undefined && item.price !== oldItem.price) updates.price = item.price;
+            if (item.quantity !== undefined && item.quantity !== oldItem.quantity) updates.quantity = item.quantity;
             // Support code update if needed
             if (item.code && item.code !== oldItem.code) updates.code = item.code;
 

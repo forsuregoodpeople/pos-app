@@ -14,6 +14,7 @@ interface Part {
     price: number;
     quantity?: number;
     type?: 'mutasi' | 'bengkel';
+    displayColumn?: string;
 }
 
 interface ProductGridProps {
@@ -207,7 +208,7 @@ export default function ProductGrid({
 
                                 <div className="mt-auto">
                                     <div className={(isService ? "text-blue-600" : "text-green-600") + " font-bold text-sm"}>
-                                        {formatCurrency(item.price)}
+                                        {(item as any).displayColumn || formatCurrency(item.price)}
                                     </div>
 
                                     {isPart && (

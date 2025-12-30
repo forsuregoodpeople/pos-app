@@ -22,22 +22,19 @@ interface PriceEditModalProps {
 
 export function PriceEditModal({ isOpen, item, onClose, onSave }: PriceEditModalProps) {
   const [price, setPrice] = useState(0);
-  const [discount, setDiscount] = useState(0);
 
   useEffect(() => {
     if (item) {
       setPrice(item.price);
-      setDiscount(item.discount);
     }
   }, [item]);
 
   const handleSave = () => {
     if (!item) return;
-    onSave(item.id, price, discount);
+    // Always pass 0 for discount as the feature is removed from UI
+    onSave(item.id, price, 0);
     onClose();
   };
-
-  const finalPrice = Math.max(0, price - discount);
 
   const fCur = (v: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -47,8 +44,6 @@ export function PriceEditModal({ isOpen, item, onClose, onSave }: PriceEditModal
     }).format(v);
 
   const fNum = (v: number) => v.toLocaleString("id-ID");
-
-  const qDisc = [0, 5000, 10000, 15000, 20000];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -84,51 +79,11 @@ export function PriceEditModal({ isOpen, item, onClose, onSave }: PriceEditModal
             </div>
           </div>
 
-          {/* Discount */}
-          <div className="space-y-1.5">
-            <Label htmlFor="discount">Diskon</Label>
-            <div className="relative">
-              <Input
-                id="discount"
-                type="text"
-                value={fNum(discount)}
-                onChange={(e) => setDiscount(Number(e.target.value.replace(/[^\d]/g, "")) || 0)}
-                className="text-right pr-12"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Rp</span>
-            </div>
-
-            {/* Quick Discount */}
-            <div className="grid grid-cols-5 gap-1">
-              {qDisc.map((amount) => (
-                <Button
-                  key={amount}
-                  variant={discount === amount ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDiscount(amount)}
-                  className="h-7 text-xs"
-                >
-                  {amount === 0 ? "0" : `${amount / 1000}K`}
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {/* Summary */}
           <div className="border rounded-md p-3 bg-muted/20 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{fCur(price)}</span>
-            </div>
-            {discount > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Diskon</span>
-                <span className="text-destructive">-{fCur(discount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold pt-2 border-t">
+            <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span className="text-primary">{fCur(finalPrice)}</span>
+              <span className="text-primary">{fCur(price)}</span>
             </div>
           </div>
         </div>

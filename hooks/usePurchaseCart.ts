@@ -7,12 +7,14 @@ export interface PurchaseCartItem {
     qty: number;
     discount: number;
     subtotal: number;
+    type?: 'mutasi' | 'bengkel';
+    code?: string;
 }
 
 export function usePurchaseCart() {
     const [cart, setCart] = useState<PurchaseCartItem[]>([]);
 
-    const addToCart = (item: { id: string; name: string; price: number }) => {
+    const addToCart = (item: { id: string; name: string; price: number; type?: 'mutasi' | 'bengkel'; code?: string }) => {
         setCart(prevCart => {
             const existing = prevCart.find(c => c.id === item.id);
             if (existing) {
@@ -28,7 +30,9 @@ export function usePurchaseCart() {
                 price: item.price,
                 qty: 1,
                 discount: 0,
-                subtotal: item.price
+                subtotal: item.price,
+                type: item.type || 'mutasi',
+                code: item.code
             }];
         });
         return item.name;

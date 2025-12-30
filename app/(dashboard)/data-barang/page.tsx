@@ -105,24 +105,34 @@ export default function DataBarangPage() {
     
     // Add Modal State
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [newItem, setNewItem] = useState({ code: '', name: '', price: 0 });
+    const [newItem, setNewItem] = useState({ code: '', name: '', price: 0, quantity: 0 });
     const [isAdding, setIsAdding] = useState(false);
     // Sync Stock Modal State
     const [isSyncOpen, setIsSyncOpen] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState<string | null>(null);
     const [selectedMutation, setSelectedMutation] = useState<DataBarangMutasi | null>(null);
-    const [syncMode, setSyncMode] = useState<'add' | 'subtract'>('add');
-    const [customQuantities, setCustomQuantities] = useState<Record<string, number>>({});
+    const [syncMode, setSyncMode] = useState<'add' | 'subtract' | 'set'>('set');
+    const [customUpdates, setCustomUpdates] = useState<Record<string, { quantity: number, itemName: string }>>({});
 
     useEffect(() => {
         setIsClient(true);
     }, []);
 
+    // ... (skipping unchanged parts) ...
+
+    // Filter logic for Bengkel Items - NO CHANGES HERE 
+    // BUT I cannot use ... skipping in replacement content if I want to be safe with replace_file_content unless I target specific blocks.
+    // The previous edit failed because I tried to replace a large chunk and maybe context didn't match perfectly or I made a mistake.
+    // I will try to split this into two smaller replacements if possible, but the tool allows one call.
+    // Actually, I can use multi_replace_file_content for non-contiguous edits, or just replace the state definition first, then the handler.
+    // Let's use multi_replace_file_content since the locations are far apart (Line 115 vs Line 305).
+
+
     // Columns for Bengkel (Item Master)
     const columnsBengkel = [
         { key: 'code' as const, label: 'Kode Barang', type: 'text' as const, editable: true },
         { key: 'name' as const, label: 'Nama Barang', type: 'text' as const, editable: true },
-        { key: 'quantity' as const, label: 'Kuantitas', type: 'number' as const, editable: false },
+        { key: 'quantity' as const, label: 'Kuantitas', type: 'number' as const, editable: true },
         { key: 'price' as const, label: 'Harga', type: 'number' as const, editable: true },
     ];
 
@@ -174,6 +184,7 @@ export default function DataBarangPage() {
         }
 
         const price = Number(newItem.price);
+        const quantity = Number(newItem.quantity); // Parse quantity
 
         setIsAdding(true);
         try {
@@ -181,11 +192,12 @@ export default function DataBarangPage() {
                 code: newItem.code,
                 name: newItem.name,
                 price: price,
+                quantity: quantity, // Pass quantity
                 type: 'bengkel'
             });
             toast.success("Barang bengkel berhasil ditambahkan");
             setIsAddOpen(false);
-            setNewItem({ code: '', name: '', price: 0 });
+            setNewItem({ code: '', name: '', price: 0, quantity: 0 }); // Reset quantity
             reloadItems();
         } catch (error) {
             console.error(error);
@@ -305,13 +317,16 @@ export default function DataBarangPage() {
                                                                 onClick={() => {
                                                                     setSelectedTransaction(mutation.transactionCode);
                                                                     setSelectedMutation(mutation);
-                                                                    // Initialize custom quantities with mutation quantities as defaults
-                                                                    const initialQty: Record<string, number> = {};
+                                                                    // Initialize custom updates with mutation data
+                                                                    const initialUpdates: Record<string, { quantity: number, itemName: string }> = {};
                                                                     mutation.items.forEach(item => {
-                                                                        initialQty[item.itemName] = item.quantity;
+                                                                        initialUpdates[item.itemName] = {
+                                                                            quantity: item.quantity,
+                                                                            itemName: item.itemName
+                                                                        };
                                                                     });
-                                                                    setCustomQuantities(initialQty);
-                                                                    setSyncMode('add'); // Reset to default mode
+                                                                    setCustomUpdates(initialUpdates);
+                                                                    setSyncMode('set'); // Default to correction mode
                                                                     setIsSyncOpen(true);
                                                                 }}
                                                             >
@@ -409,6 +424,18 @@ export default function DataBarangPage() {
                                 className="col-span-3"
                             />
                         </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="quantity" className="text-right">
+                                Kuantitas
+                            </Label>
+                            <Input
+                                id="quantity"
+                                type="number"
+                                value={newItem.quantity}
+                                onChange={(e) => setNewItem({ ...newItem, quantity: Number(e.target.value) })}
+                                className="col-span-3"
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
@@ -433,26 +460,11 @@ export default function DataBarangPage() {
                             )}
                         </div>
 
-                        {/* Mode Selector */}
-                        <div className="flex gap-2 p-2 bg-muted rounded-lg">
-                            <Button
-                                variant={syncMode === 'add' ? 'default' : 'ghost'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setSyncMode('add')}
-                            >
-                                <ArrowUpCircle className="h-4 w-4 mr-2" />
-                                Tambah Stok
-                            </Button>
-                            <Button
-                                variant={syncMode === 'subtract' ? 'destructive' : 'ghost'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setSyncMode('subtract')}
-                            >
-                                <ArrowDownCircle className="h-4 w-4 mr-2" />
-                                Kurangi Stok
-                            </Button>
+                        {/* Mode Info */}
+                        <div className="text-xs text-muted-foreground bg-blue-50 text-blue-700 p-3 rounded border border-blue-200">
+                            <p>
+                                <strong>Mode Koreksi:</strong> Masukkan jumlah yang benar. Data transaksi akan di-update sesuai angka yang Anda masukkan.
+                            </p>
                         </div>
 
                         {/* Items List with Quantity Inputs */}
@@ -466,45 +478,61 @@ export default function DataBarangPage() {
                                 </div>
                                 <div className="divide-y max-h-64 overflow-y-auto">
                                     {selectedMutation.items.map((item, idx) => (
-                                        <div key={idx} className="p-4 flex items-center justify-between hover:bg-muted/30">
-                                            <div className="flex-1">
-                                                <p className="font-medium text-sm">{item.itemName}</p>
-                                                <p className="text-xs text-muted-foreground mt-0.5">
-                                                    Qty asli: {item.quantity}
-                                                </p>
+                                        <div key={idx} className="p-4 flex flex-col gap-3 hover:bg-muted/30 border-b last:border-0">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                     <div className="flex flex-col gap-1">
+                                                        <Label className="text-xs text-muted-foreground">Item Name (Original: {item.itemName})</Label>
+                                                        <Input
+                                                            value={customUpdates[item.itemName]?.itemName ?? item.itemName}
+                                                            onChange={(e) => {
+                                                                const newName = e.target.value;
+                                                                setCustomUpdates(prev => ({
+                                                                    ...prev,
+                                                                    [item.itemName]: {
+                                                                        ...prev[item.itemName] || { quantity: item.quantity, itemName: item.itemName },
+                                                                        itemName: newName
+                                                                    }
+                                                                }));
+                                                            }}
+                                                            className="h-8 text-sm"
+                                                            placeholder="Nama Item"
+                                                        />
+                                                     </div>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Label htmlFor={`qty-${idx}`} className="text-sm whitespace-nowrap">
-                                                    Jumlah:
-                                                </Label>
-                                                <Input
-                                                    id={`qty-${idx}`}
-                                                    type="number"
-                                                    min="0"
-                                                    className="w-24"
-                                                    value={customQuantities[item.itemName] || 0}
-                                                    onChange={(e) => {
-                                                        const newValue = parseInt(e.target.value) || 0;
-                                                        setCustomQuantities(prev => ({
-                                                            ...prev,
-                                                            [item.itemName]: newValue
-                                                        }));
-                                                    }}
-                                                />
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-xs text-muted-foreground">
+                                                    Qty saat ini: {item.quantity}
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <Label htmlFor={`qty-${idx}`} className="text-sm whitespace-nowrap">
+                                                        Qty Baru:
+                                                    </Label>
+                                                    <Input
+                                                        id={`qty-${idx}`}
+                                                        type="number"
+                                                        min="0"
+                                                        className="w-24 h-8"
+                                                        value={customUpdates[item.itemName]?.quantity ?? item.quantity}
+                                                        onChange={(e) => {
+                                                            const newValue = parseInt(e.target.value);
+                                                            setCustomUpdates(prev => ({
+                                                                ...prev,
+                                                                [item.itemName]: {
+                                                                    ...prev[item.itemName] || { quantity: item.quantity, itemName: item.itemName },
+                                                                    quantity: isNaN(newValue) ? 0 : newValue
+                                                                }
+                                                            }));
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-
-                        {/* Summary */}
-                        <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
-                            <p>
-                                <strong>Mode {syncMode === 'add' ? 'Tambah' : 'Kurangi'}:</strong> Stok master akan di
-                                <strong>{syncMode === 'add' ? 'tambah' : 'kurangi'}</strong> sesuai jumlah yang Anda masukkan.
-                            </p>
-                        </div>
                     </div>
                     
                     <DialogFooter className="mt-4 gap-2">
@@ -516,17 +544,17 @@ export default function DataBarangPage() {
                             Batal
                         </Button>
                         <Button 
-                            variant={syncMode === 'add' ? 'default' : 'destructive'}
                             onClick={async () => {
                                 if (selectedTransaction) {
-                                    const itemCount = Object.keys(customQuantities).length;
-                                    if(confirm(`Yakin ingin ${syncMode === 'add' ? 'menambah' : 'mengurangi'} stok untuk ${itemCount} item?`)) {
+                                    if(confirm(`Yakin ingin mengupdate data stok dan nama item untuk transaksi ini?`)) {
                                         try {
-                                            await syncMutation(selectedTransaction, syncMode, customQuantities);
-                                            toast.success(`Stok berhasil ${syncMode === 'add' ? 'ditambah' : 'dikurangi'}`);
+                                            // Pass customUpdates instead of customQuantities
+                                            await syncMutation(selectedTransaction, 'set', customUpdates);
+                                            toast.success(`Data berhasil diperbarui`);
                                             reloadItems();
+                                            reloadMutations();
                                         } catch (e) {
-                                            toast.error(e instanceof Error ? e.message : 'Gagal sinkronisasi');
+                                            toast.error(e instanceof Error ? e.message : 'Gagal update');
                                         } finally {
                                             setIsSyncOpen(false);
                                         }
@@ -535,8 +563,8 @@ export default function DataBarangPage() {
                             }}
                             className="min-w-32"
                         >
-                            {syncMode === 'add' ? <ArrowUpCircle className="h-4 w-4 mr-2" /> : <ArrowDownCircle className="h-4 w-4 mr-2" />}
-                            Terapkan
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Update Stok
                         </Button>
                     </DialogFooter>
                 </DialogContent>

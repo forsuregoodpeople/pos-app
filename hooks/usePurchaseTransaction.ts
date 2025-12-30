@@ -4,12 +4,15 @@ import { createPurchaseAction, generatePurchaseInvoiceNumber } from "@/services/
 export function usePurchaseTransaction() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
     const savePurchase = async (
         supplier: any,
         items: any[],
         total: number,
-        notes?: string
+        notes?: string,
+        paymentMethodId?: string,
+        paymentStatus: 'paid' | 'pending' = 'pending'
     ) => {
         setLoading(true);
         setError(null);
@@ -17,21 +20,28 @@ export function usePurchaseTransaction() {
         try {
             const invoiceNumber = generatePurchaseInvoiceNumber();
             
+            // Logic: Use the passed paymentStatus
+            // If user selected "Belum Lunas" -> Force pending even if payment method exists (though UI hides it)
+            // If user selected "Lunas" -> Paid
+            const isPaid = paymentStatus === 'paid';
+            
             const purchaseData = {
                 invoice_number: invoiceNumber,
                 supplier_id: supplier?.id,
-                purchase_date: new Date().toISOString(),
+                purchase_date: date,
                 total_amount: total,
                 discount_amount: 0,
                 final_amount: total,
-                payment_status: 'pending' as const,
+                payment_status: paymentStatus,
+                paid_amount: isPaid ? total : 0,
+                payment_method: isPaid ? (paymentMethodId || undefined) : undefined,
                 notes: notes,
-                created_by: 'system' // TODO: Get from auth context
             };
 
             const purchaseItems = items.map(item => ({
                 item_name: item.name,
                 item_type: 'part' as const,
+                item_code: item.code,
                 quantity: item.qty,
                 unit_price: item.price,
                 total_price: item.subtotal
@@ -48,10 +58,9 @@ export function usePurchaseTransaction() {
         }
     };
 
-    const date = new Date().toISOString();
-
     return {
         date,
+        setDate,
         savePurchase,
         loading,
         error

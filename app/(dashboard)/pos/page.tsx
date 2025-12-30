@@ -22,6 +22,9 @@ import ProductGrid from "@/components/pos/ProductGrid";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { usePaymentTypes } from "@/hooks/usePaymentTypes";
 
 export default function PointOnSale() {
     const { cart, addToCart, addToCartWithQty, removeFromCart, updateQty, updatePrice, updateDiscount, calculateSubtotal, calculateTotal, clearCart } = useCart();
@@ -49,6 +52,9 @@ export default function PointOnSale() {
     const [showEditTransactionModal, setShowEditTransactionModal] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingInvoiceNumber, setEditingInvoiceNumber] = useState<string | null>(null);
+    const { items: paymentTypes, loadPaymentTypes } = usePaymentTypes();
+    const [selectedPaymentTypeId, setSelectedPaymentTypeId] = useState<string>("");
+    const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
 
     const [invoiceNumber, setInvoiceNumber] = useState("INV-LOADING");
     const [isClient, setIsClient] = useState(false);
@@ -71,8 +77,19 @@ export default function PointOnSale() {
         
         checkTablet();
         window.addEventListener('resize', checkTablet);
+
+        // Load payment types
+        loadPaymentTypes().then((types) => {
+            const defaultType = types.find(t => t.is_default);
+            if (defaultType) {
+                setSelectedPaymentTypeId(defaultType.id);
+            } else if (types.length > 0) {
+                setSelectedPaymentTypeId(types[0].id);
+            }
+        });
+
         return () => window.removeEventListener('resize', checkTablet);
-    }, []);
+    }, [loadPaymentTypes]);
 
     const handleEditTransaction = (transaction: any) => {
         try {
@@ -103,6 +120,11 @@ export default function PointOnSale() {
             }
             
             setKeterangan(String(transaction.keterangan || ''));
+            if ((transaction as any).payment_type_id) {
+                setSelectedPaymentTypeId((transaction as any).payment_type_id);
+            } else if ((transaction as any).paymentTypeId) {
+                 setSelectedPaymentTypeId((transaction as any).paymentTypeId);
+            }
             setEditingInvoiceNumber(transaction.invoiceNumber);
             setIsEditMode(true);
             setShowEditTransactionModal(false);
@@ -168,6 +190,7 @@ export default function PointOnSale() {
                 ppn: Number(ppn),
                 biayaLain: Number(biayaLain),
                 keterangan: String(keterangan || ''),
+                paymentTypeId: selectedPaymentTypeId,
                 mechanics: mechanics.map(m => ({ ...m }))
             };
 
@@ -212,6 +235,13 @@ export default function PointOnSale() {
             setPpn(Number(savedCart.ppn || 0));
             setBiayaLain(Number(savedCart.biayaLain || 0));
             setKeterangan(String(savedCart.keterangan || ''));
+            if (savedCart.paymentTypeId) {
+                setSelectedPaymentTypeId(savedCart.paymentTypeId);
+            } else {
+                 // reset to default if not saved
+                const defaultType = paymentTypes.find(t => t.is_default);
+                if (defaultType) setSelectedPaymentTypeId(defaultType.id);
+            }
 
             toast.success("Keranjang berhasil dimuat!", { position: "bottom-left" });
             setShowSavedCartsModal(false);
@@ -306,7 +336,14 @@ export default function PointOnSale() {
             const total = calculateTotal(); // asumsi calculateTotal sudah menghitung PPN kalau diperlukan
             const grandTotal = total + (biayaLain ?? 0);
 
-            const saved = await saveInvoice(customerWithMechanics, cart, grandTotal, keterangan);
+            if (paymentStatus === 'paid' && !selectedPaymentTypeId) {
+                 return toast.error("Pilih tipe pembayaran untuk status Lunas!");
+            }
+
+            const selectedPaymentType = paymentTypes.find(t => t.id === selectedPaymentTypeId);
+            const paymentTypeName = selectedPaymentType?.name;
+
+            const saved = await saveInvoice(customerWithMechanics, cart, grandTotal, keterangan, selectedPaymentTypeId, paymentTypeName, paymentStatus);
             if (!saved) throw new Error("save failed");
 
             toast.success("Transaksi berhasil disimpan!", { position: "bottom-left" });
@@ -324,6 +361,7 @@ export default function PointOnSale() {
             setPpn(0);
             setBiayaLain(0);
             setKeterangan("");
+            setPaymentStatus('paid'); // Reset to default
             setShowKeteranganModal(false);
 
             // Generate new invoice number after successful checkout
@@ -375,7 +413,9 @@ export default function PointOnSale() {
                 items: cart,
                 total: grandTotal,
                 savedAt: new Date().toISOString(),
-                keterangan
+                keterangan,
+                paymentTypeId: selectedPaymentTypeId,
+                paymentTypeName: paymentTypes.find(t => t.id === selectedPaymentTypeId)?.name
             };
 
             const updated = await updateTransaction(editingInvoiceNumber, transactionData);
@@ -504,6 +544,11 @@ export default function PointOnSale() {
                                     onLoadSavedCart={() => setShowSavedCartsModal(true)}
                                     isMobile={false}
                                     maxStocks={maxStocks}
+                                    paymentTypes={paymentTypes}
+                                    selectedPaymentTypeId={selectedPaymentTypeId}
+                                    onPaymentTypeChange={setSelectedPaymentTypeId}
+                                    paymentStatus={paymentStatus}
+                                    onPaymentStatusChange={setPaymentStatus}
                                 />
                             </aside>
                         </div>
@@ -559,6 +604,11 @@ export default function PointOnSale() {
                                 onLoadSavedCart={() => setShowSavedCartsModal(true)}
                                 isMobile={false}
                                 maxStocks={maxStocks}
+                                paymentTypes={paymentTypes}
+                                selectedPaymentTypeId={selectedPaymentTypeId}
+                                onPaymentTypeChange={setSelectedPaymentTypeId}
+                                paymentStatus={paymentStatus}
+                                onPaymentStatusChange={setPaymentStatus}
                             />
                         </aside>
 
@@ -604,6 +654,11 @@ export default function PointOnSale() {
                                onLoadSavedCart={() => setShowSavedCartsModal(true)}
                                isMobile={true}
                                maxStocks={maxStocks}
+                               paymentTypes={paymentTypes}
+                               selectedPaymentTypeId={selectedPaymentTypeId}
+                               onPaymentTypeChange={setSelectedPaymentTypeId}
+                               paymentStatus={paymentStatus}
+                               onPaymentStatusChange={setPaymentStatus}
                            />
                         </div>
                     </div>
@@ -646,6 +701,7 @@ export default function PointOnSale() {
                             rows={4}
                             className="w-full"
                         />
+
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowKeteranganModal(false)}>Batal</Button>
@@ -742,6 +798,7 @@ export default function PointOnSale() {
                     biayaLain={biayaLain}
                     total={calculateTotal()}
                     keterangan={keterangan}
+                    paymentTypeName={paymentTypes.find(t => t.id === selectedPaymentTypeId)?.name}
                 />
             </div>
         </SidebarInset>

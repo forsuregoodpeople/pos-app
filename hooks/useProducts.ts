@@ -12,6 +12,7 @@ export interface Part {
     type?: 'mutasi' | 'bengkel';
     category?: string;
     image?: string;
+    displayColumn?: string;
 }
 
 export function useProducts() {
@@ -35,7 +36,8 @@ export function useProducts() {
                     id: `MUT-${mutation.transactionCode}-${item.id || index}`, // Ensure unique ID
                     code: item.transactionCode, // Use transaction code as item code or keep it distinct
                     name: `${item.itemName} (${mutation.customerName})`, // Valid for POS display
-                    price: parseFloat(item.priceCode || '0'), // Assuming priceCode is string number
+                    price: isNaN(parseFloat(item.priceCode as string)) ? 0 : parseFloat(item.priceCode as string),
+                    displayColumn: isNaN(parseFloat(item.priceCode as string)) ? (item.priceCode as string) : undefined,
                     quantity: item.quantity,
                     type: 'mutasi', // Explicitly mark as mutasi
                     category: 'Mutasi',

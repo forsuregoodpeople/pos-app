@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { ShoppingCart, Trash2, User, Printer, Wrench, Edit2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { CartItem } from "@/hooks/useCart";
 import { CustomerInfo } from "@/hooks/useCustomer";
 import { PriceEditModal } from "./PriceEditModal";
@@ -27,7 +29,13 @@ interface CartItemsProps {
     onSaveCart?: () => void;
     onLoadSavedCart?: () => void;
     isMobile?: boolean;
+
     maxStocks?: { [key: string]: number };
+    paymentTypes?: any[];
+    selectedPaymentTypeId?: string;
+    onPaymentTypeChange?: (id: string) => void;
+    paymentStatus?: 'paid' | 'pending';
+    onPaymentStatusChange?: (status: 'paid' | 'pending') => void;
 }
 
 export function CartItems({
@@ -51,7 +59,13 @@ export function CartItems({
     onSaveCart,
     onLoadSavedCart,
     isMobile = false,
+
     maxStocks = {},
+    paymentTypes = [],
+    selectedPaymentTypeId = "",
+    onPaymentTypeChange = () => {},
+    paymentStatus = 'paid',
+    onPaymentStatusChange = () => {},
 }: CartItemsProps) {
     const cartServices = cart.filter(item => item.type === "service");
     const cartParts = cart.filter(item => item.type === "part");
@@ -273,6 +287,44 @@ export function CartItems({
 
                 {/* Total & Checkout */}
                 <div className="border-t bg-white p-4 space-y-3 shrink-0">
+                    {/* Payment Status Selector */}
+                    <div className="space-y-1 w-full">
+                        <Label className="text-xs text-gray-500">Status Pembayaran</Label>
+                        <Select 
+                            value={paymentStatus} 
+                            onValueChange={(value) => onPaymentStatusChange?.(value as 'paid' | 'pending')}
+                        >
+                            <SelectTrigger className="w-full h-8 text-xs">
+                                <SelectValue placeholder="Pilih status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="paid" className="text-xs font-medium text-green-600">
+                                    Lunas (Paid)
+                                </SelectItem>
+                                <SelectItem value="pending" className="text-xs font-medium text-yellow-600">
+                                    Belum Lunas (Hutang)
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Payment Type Selector */}
+                    <div className="space-y-1 w-full">
+                        <Label className="text-xs text-gray-500">Tipe Pembayaran</Label>
+                        <Select value={selectedPaymentTypeId} onValueChange={onPaymentTypeChange}>
+                            <SelectTrigger className="w-full h-8 text-xs">
+                                <SelectValue placeholder="Pilih tipe pembayaran" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {paymentTypes.filter(p => p.is_active).map((type) => (
+                                    <SelectItem key={type.id} value={type.id} className="text-xs">
+                                        {type.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal:</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
     getFinancialReportsAction,
     saveFinancialReportAction,
@@ -6,6 +7,8 @@ import {
     getJournalEntriesAction,
     calculateProfitLossAction,
     generateJournalEntriesFromTransactionsAction,
+    generateJournalEntriesFromPurchasesAction,
+    generateJournalEntriesFromReturnsAction,
     getSeasonalityAnalysisAction,
     FinancialReport,
     ChartOfAccount,
@@ -138,6 +141,27 @@ export function useFinancialReports() {
         }
     }, [loadJournalEntries]);
 
+    const generatePurchaseJournalEntries = useCallback(async (
+        startDate: string,
+        endDate: string
+    ) => {
+        setLoading(true);
+        setError(null);
+        try {
+            await generateJournalEntriesFromPurchasesAction(startDate, endDate);
+            await generateJournalEntriesFromReturnsAction(startDate, endDate);
+            // Reload journal entries after generating
+            await loadJournalEntries(startDate, endDate);
+        } catch (err: any) {
+            const errorMessage = err?.message || 'Gagal generate jurnal dari pembelian';
+            setError(errorMessage);
+            console.error('useFinancialReports: Generate purchase journal entries error:', errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, [loadJournalEntries]);
+
     useEffect(() => {
         loadReports();
         loadChartOfAccounts();
@@ -157,7 +181,8 @@ export function useFinancialReports() {
         loadJournalEntries,
         saveReport,
         calculateProfitLoss,
-        generateJournalEntries
+        generateJournalEntries,
+        generatePurchaseJournalEntries
     };
 }
 
@@ -280,6 +305,33 @@ export function useBalanceSheet() {
                     }
                 }
             }
+
+            // Direct queries for accurate real-time data
+            
+            // Get current inventory value from data_barang
+            const { data: inventory } = await supabase
+                .from('data_barang')
+                .select('quantity, purchase_price');
+
+            if (inventory && inventory.length > 0) {
+                const inventoryValue = inventory.reduce((sum: number, item: any) => 
+                    sum + ((item.quantity || 0) * (item.purchase_price || 0)), 0);
+                balanceSheet.assets.current_assets.inventory += inventoryValue;
+            }
+
+            // Get unpaid purchases (accounts payable)
+            const { data: unpaidPurchases } = await supabase
+                .from('purchases')
+                .select('final_amount, paid_amount')
+                .in('payment_status', ['pending', 'partial'])
+                .lte('purchase_date', endDate);
+
+            if (unpaidPurchases && unpaidPurchases.length > 0) {
+                const payableAmount = unpaidPurchases.reduce((sum: number, p: any) => 
+                    sum + ((p.final_amount || 0) - (p.paid_amount || 0)), 0);
+                balanceSheet.liabilities.current_liabilities.accounts_payable += payableAmount;
+            }
+
 
             // Calculate totals
             balanceSheet.assets.current_assets.total_current_assets = 
@@ -404,6 +456,35 @@ export function useCashFlow() {
                     }
                 }
             }
+
+            // Direct queries for accurate real-time cash flow data
+            
+            // Get paid transactions (cash from customers)
+            const { data: paidTransactions } = await supabase
+                .from('data_transaksi')
+                .select('total, payment_status')
+                .eq('payment_status', 'paid')
+                .gte('saved_at', startDate)
+                .lte('saved_at', endDate);
+
+            if (paidTransactions && paidTransactions.length > 0) {
+                cashFlow.operating_activities.cash_from_customers += 
+                    paidTransactions.reduce((sum: number, t: any) => sum + (t.total || 0), 0);
+            }
+
+            // Get paid purchases (cash paid to suppliers)
+            const { data: paidPurchases } = await supabase
+                .from('purchases')
+                .select('paid_amount')
+                .eq('payment_status', 'paid')
+                .gte('purchase_date', startDate)
+                .lte('purchase_date', endDate);
+
+            if (paidPurchases && paidPurchases.length > 0) {
+                cashFlow.operating_activities.cash_paid_to_suppliers += 
+                    paidPurchases.reduce((sum: number, p: any) => sum + (p.paid_amount || 0), 0);
+            }
+
 
             // Calculate totals
             cashFlow.operating_activities.net_operating_cash = 

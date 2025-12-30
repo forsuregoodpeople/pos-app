@@ -1,9 +1,15 @@
 "use client";
 
-import { FileText, Clock, Wrench, Package, Users, LogOut, Shield, Settings, UserCheck, Receipt, BookOpen, Building, ShoppingCart, DollarSign, CreditCard, BarChart3 } from "lucide-react";
+import { FileText, Clock, Wrench, Package, Users, LogOut, Shield, Settings, UserCheck, Receipt, BookOpen, Building, ShoppingCart, CreditCard, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+
+const RupiahIcon = ({ className }: { className?: string }) => (
+    <div className={`flex items-center justify-center font-bold text-[9px] border-2 border-current rounded-[4px] ${className}`}>
+        Rp
+    </div>
+);
 import { useAuth } from "@/contexts/AuthContext";
 import {
     Sidebar,
@@ -34,38 +40,38 @@ const menuItems = [
         group: "transaksi",
     },
     {
-        title: "Data Jasa",
+        title: "Jasa",
         icon: Wrench,
         href: "/data-jasa",
         group: "master",
     },
     {
-        title: "Data Barang",
+        title: "Barang",
         icon: Package,
         href: "/data-barang",
         group: "master",
     },
     {
-        title: "Data Mekanik",
+        title: "Mekanik",
         icon: Users,
         href: "/data-mekanik",
         group: "master",
     },
     {
-        title: "Pengaturan Mekanik",
+        title: "Setting Mekanik",
         icon: Settings,
         href: "/pengaturan-mekanik",
         group: "master",
     },
     {
-        title: "Data Supplier",
+        title: "Supplier",
         icon: Building,
         href: "/data-supplier",
         group: "master",
     },
     {
-        title: "Data Tipe Pembayaran",
-        icon: DollarSign,
+        title: "Tipe Pembayaran",
+        icon: RupiahIcon,
         href: "/data-tipe-pembayaran",
         group: "master",
     },
@@ -82,25 +88,31 @@ const menuItems = [
         group: "pembelian",
     },
     {
-        title: "Hutang Pembelian",
+        title: "Hutang",
         icon: Receipt,
         href: "/hutang-pembelian",
         group: "pembelian",
     },
     {
-        title: "Laporan Pembelian",
-        icon: FileText,
-        href: "/laporan-pembelian",
-        group: "pembelian",
+        title: "Laporan Stok",
+        icon: Package,
+        href: "/laporan-stok",
+        group: "laporan",
     },
     {
-        title: "Laporan Keuangan",
+        title: "Riwayat Pembelian",
+        icon: FileText,
+        href: "/laporan-pembelian",
+        group: "laporan",
+    },
+    {
+        title: "Keuangan",
         icon: BookOpen,
         href: "/laporan-keuangan",
         group: "laporan",
     },
     {
-        title: "Laporan Performa Mekanik",
+        title: "Performa Mekanik",
         icon: BarChart3,
         href: "/laporan-performa-mekanik",
         group: "laporan",

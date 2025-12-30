@@ -49,12 +49,12 @@ export function useDataBarangMutasi() {
 
     const syncMutation = async (
         transactionCode: string, 
-        mode: 'add' | 'subtract' = 'add',
-        customQuantities?: Record<string, number>
+        mode: 'add' | 'subtract' | 'set' = 'add',
+        customUpdates?: Record<string, { quantity: number, itemName?: string }>
     ) => {
         setError(null);
         try {
-            await synchronizeStockAction(transactionCode, mode, customQuantities);
+            const result = await synchronizeStockAction(transactionCode, mode, customUpdates);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Gagal menyinkronkan stok.');
             throw err;

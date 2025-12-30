@@ -400,6 +400,57 @@ export async function calculateProfitLossAction(
             }
         }
 
+        // Direct queries for accurate real-time data (fallback if journal entries not generated)
+        
+        // Get POS sales revenue
+        const { data: transactions } = await supabase
+            .from('data_transaksi')
+            .select('*')
+            .gte('saved_at', startDate)
+            .lte('saved_at', endDate);
+
+        if (transactions && transactions.length > 0) {
+            for (const transaction of transactions) {
+                // Handle both string and already-parsed object
+                const items = typeof transaction.items === 'string' 
+                    ? JSON.parse(transaction.items) 
+                    : (transaction.items || []);
+                    
+                for (const item of items) {
+                    if (item.type === 'service') {
+                        profitLoss.revenue.service_revenue += (item.price * item.qty);
+                    } else if (item.type === 'part') {
+                        profitLoss.revenue.product_revenue += (item.price * item.qty);
+                    }
+                }
+            }
+        }
+
+        // Get purchase expenses (COGS)
+        const { data: purchases } = await supabase
+            .from('purchases')
+            .select('final_amount')
+            .gte('purchase_date', startDate)
+            .lte('purchase_date', endDate);
+
+        if (purchases && purchases.length > 0) {
+            profitLoss.expenses.cost_of_goods_sold += 
+                purchases.reduce((sum, p) => sum + (p.final_amount || 0), 0);
+        }
+
+        // Get purchase returns (reduce COGS)
+        const { data: returns } = await supabase
+            .from('purchase_returns')
+            .select('total_amount')
+            .gte('return_date', startDate)
+            .lte('return_date', endDate);
+
+        if (returns && returns.length > 0) {
+            profitLoss.expenses.cost_of_goods_sold -= 
+                returns.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+        }
+
+
         // Calculate totals
         profitLoss.revenue.total_revenue =
             profitLoss.revenue.service_revenue +
@@ -514,6 +565,171 @@ export async function generateJournalEntriesFromTransactionsAction(
     }
 }
 
+// Generate journal entries from purchases
+export async function generateJournalEntriesFromPurchasesAction(
+    startDate: string,
+    endDate: string
+): Promise<void> {
+    try {
+        // Get purchases for period
+        const { data: purchases, error } = await supabase
+            .from('purchases')
+            .select(`
+                *,
+                items:purchase_items(*)
+            `)
+            .gte('purchase_date', startDate)
+            .lte('purchase_date', endDate);
+
+        if (error) throw error;
+        if (!purchases || purchases.length === 0) return;
+
+        // Get chart of accounts
+        const accounts = await getChartOfAccountsAction();
+        const accountMap = new Map(
+            accounts.map(acc => [acc.account_code, acc])
+        );
+
+        for (const purchase of purchases) {
+            const entryNumber = `PUR-${purchase.invoice_number}`;
+            const entryDate = purchase.purchase_date;
+            const description = `Pembelian ${purchase.invoice_number}${purchase.supplier_id ? ' - Supplier' : ''}`;
+
+            const lines = [];
+
+            // Debit: Inventory or COGS (140 or 500)
+            // Using Inventory (140) since we're tracking stock
+            const inventoryAccount = accountMap.get('140');
+            if (inventoryAccount) {
+                lines.push({
+                    account_id: inventoryAccount.id,
+                    description: `Pembelian barang`,
+                    debit_amount: purchase.final_amount,
+                    credit_amount: 0
+                });
+            }
+
+            // Credit: Accounts Payable (200) if pending, or Cash/Bank if paid
+            if (purchase.payment_status === 'paid') {
+                // Determine payment account based on payment method
+                const paymentAccount = purchase.payment_method?.toLowerCase().includes('transfer') || 
+                                      purchase.payment_method?.toLowerCase().includes('bank')
+                    ? accountMap.get('120') // Bank
+                    : accountMap.get('110'); // Cash
+
+                if (paymentAccount) {
+                    lines.push({
+                        account_id: paymentAccount.id,
+                        description: `Pembayaran ${purchase.payment_method || 'tunai'}`,
+                        debit_amount: 0,
+                        credit_amount: purchase.paid_amount || purchase.final_amount
+                    });
+                }
+            } else {
+                // Credit Accounts Payable for pending purchases
+                const payableAccount = accountMap.get('200');
+                if (payableAccount) {
+                    lines.push({
+                        account_id: payableAccount.id,
+                        description: `Hutang pembelian`,
+                        debit_amount: 0,
+                        credit_amount: purchase.final_amount
+                    });
+                }
+            }
+
+            // Only create entry if we have valid lines
+            if (lines.length >= 2) {
+                await createJournalEntryAction(
+                    entryNumber,
+                    entryDate,
+                    description,
+                    'purchase',
+                    purchase.id,
+                    lines
+                );
+            }
+        }
+    } catch (error) {
+        console.error('Error generating journal entries from purchases:', error);
+        throw new Error('Gagal generate jurnal dari pembelian');
+    }
+}
+
+// Generate journal entries from purchase returns
+export async function generateJournalEntriesFromReturnsAction(
+    startDate: string,
+    endDate: string
+): Promise<void> {
+    try {
+        // Get purchase returns for period
+        const { data: returns, error } = await supabase
+            .from('purchase_returns')
+            .select(`
+                *,
+                purchase:purchases(invoice_number),
+                items:purchase_return_items(*)
+            `)
+            .gte('return_date', startDate)
+            .lte('return_date', endDate);
+
+        if (error) throw error;
+        if (!returns || returns.length === 0) return;
+
+        // Get chart of accounts
+        const accounts = await getChartOfAccountsAction();
+        const accountMap = new Map(
+            accounts.map(acc => [acc.account_code, acc])
+        );
+
+        for (const returnData of returns) {
+            const entryNumber = `RTN-${(returnData as any).purchase?.invoice_number || returnData.id}`;
+            const entryDate = returnData.return_date;
+            const description = `Retur Pembelian - ${returnData.reason || 'No reason'}`;
+
+            const lines = [];
+
+            // Debit: Accounts Payable (200) - reducing the liability
+            const payableAccount = accountMap.get('200');
+            if (payableAccount) {
+                lines.push({
+                    account_id: payableAccount.id,
+                    description: `Pengurangan hutang`,
+                    debit_amount: returnData.total_amount,
+                    credit_amount: 0
+                });
+            }
+
+            // Credit: Inventory (140) - reducing inventory
+            const inventoryAccount = accountMap.get('140');
+            if (inventoryAccount) {
+                lines.push({
+                    account_id: inventoryAccount.id,
+                    description: `Retur barang`,
+                    debit_amount: 0,
+                    credit_amount: returnData.total_amount
+                });
+            }
+
+            // Only create entry if we have valid lines
+            if (lines.length >= 2) {
+                await createJournalEntryAction(
+                    entryNumber,
+                    entryDate,
+                    description,
+                    'purchase_return',
+                    returnData.id,
+                    lines
+                );
+            }
+        }
+    } catch (error) {
+        console.error('Error generating journal entries from returns:', error);
+        throw new Error('Gagal generate jurnal dari retur pembelian');
+    }
+}
+
+
 export interface SeasonalityData {
     month: string;
     year: number;
@@ -598,8 +814,70 @@ export async function getSeasonalityAnalysisAction(
             monthData.transaction_count += 1;
         }
 
+        // Get purchases for period and add to expenses
+        const { data: purchases } = await supabase
+            .from('purchases')
+            .select('final_amount, purchase_date')
+            .gte('purchase_date', defaultStartDate)
+            .lte('purchase_date', defaultEndDate)
+            .order('purchase_date', { ascending: true });
+
+        // Process purchases by month
+        if (purchases && purchases.length > 0) {
+            for (const purchase of purchases) {
+                const date = new Date(purchase.purchase_date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const monthName = date.toLocaleDateString('id-ID', { month: 'long' });
+                const year = date.getFullYear();
+
+                // Create month entry if it doesn't exist
+                if (!monthlyMap.has(monthKey)) {
+                    monthlyMap.set(monthKey, {
+                        month: monthName,
+                        year,
+                        revenue: 0,
+                        expenses: 0,
+                        profit: 0,
+                        transaction_count: 0,
+                        average_transaction_value: 0,
+                        growth_rate: 0,
+                        seasonal_index: 0
+                    });
+                }
+
+                const monthData = monthlyMap.get(monthKey)!;
+                monthData.expenses += purchase.final_amount || 0;
+            }
+        }
+
+        // Get purchase returns for period and subtract from expenses
+        const { data: returns } = await supabase
+            .from('purchase_returns')
+            .select('total_amount, return_date')
+            .gte('return_date', defaultStartDate)
+            .lte('return_date', defaultEndDate);
+
+        // Process returns by month
+        if (returns && returns.length > 0) {
+            for (const returnData of returns) {
+                const date = new Date(returnData.return_date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+                if (monthlyMap.has(monthKey)) {
+                    const monthData = monthlyMap.get(monthKey)!;
+                    monthData.expenses -= returnData.total_amount || 0; // Reduce expenses
+                }
+            }
+        }
+
+
         // Calculate expenses and profit for each month
         const monthlyData = Array.from(monthlyMap.values());
+
+        // Calculate profit = revenue - expenses
+        monthlyData.forEach(data => {
+            data.profit = data.revenue - data.expenses;
+        });
 
         // Calculate average transaction value
         monthlyData.forEach(data => {

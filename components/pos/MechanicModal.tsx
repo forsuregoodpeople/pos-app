@@ -212,9 +212,6 @@ export function MechanicModal({
                                                 <span className="text-sm font-semibold text-gray-700">
                                                     {mechanic.name}
                                                 </span>
-                                                <Badge variant="outline" className="text-xs">
-                                                    Potongan: {shopCutPercentage}%
-                                                </Badge>
                                             </div>
                                             <button
                                                 onClick={() => removeMechanic(mechanic.id)}
@@ -224,7 +221,7 @@ export function MechanicModal({
                                             </button>
                                         </div>
                                         <div>
-                                            <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase Komisi (%)</Label>
+                                            <Label htmlFor={`mechanic-percentage-${mechanic.id}`}>Persentase Pengerjaan (%)</Label>
                                             <div className="relative mt-2">
                                                 <Input
                                                     id={`mechanic-percentage-${mechanic.id}`}
@@ -238,9 +235,7 @@ export function MechanicModal({
                                                 />
                                                 <Percent className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                             </div>
-                                            <div className="text-xs text-gray-600 mt-1">
-                                                Komisi: {mechanic.percentage}% dari sisa setelah potongan toko ({shopCutPercentage}%)
-                                            </div>
+
                                         </div>
                                     </div>
                                 );

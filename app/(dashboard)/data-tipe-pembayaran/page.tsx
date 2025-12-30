@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { CreditCard, Plus, Edit2, Trash2, Star, Search, Check, X, DollarSign } from "lucide-react";
+import { CreditCard, Plus, Edit2, Trash2, Star, Search, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -228,7 +228,7 @@ export default function DataTipePembayaranPage() {
                                             <tr key={paymentType.id} className="border-b hover:bg-gray-50">
                                                 <td className="p-3">
                                                     <div className="flex items-center gap-2">
-                                                        <DollarSign className="w-4 h-4 text-blue-600" />
+                                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1 rounded">Rp</span>
                                                         <span className="font-medium">{paymentType.name}</span>
                                                     </div>
                                                 </td>

@@ -6,7 +6,6 @@ import { useSuppliers } from "@/hooks/usePembelian";
 import { Plus, Edit2, Trash2, Phone, Mail, MapPin, Building, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -147,59 +146,93 @@ export default function DataSupplierPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredSuppliers.map((supplier) => (
-                            <Card key={supplier.id} className="hover:shadow-md transition-shadow">
-                                <CardHeader>
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <CardTitle className="text-lg">{supplier.name}</CardTitle>
-                                            {supplier.contact_person && (
-                                                <CardDescription>Contact: {supplier.contact_person}</CardDescription>
-                                            )}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => openEditModal(supplier)}
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => openDeleteModal(supplier)}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {supplier.phone && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Phone className="w-4 h-4 text-gray-500" />
-                                                <span>{supplier.phone}</span>
-                                            </div>
-                                        )}
-                                        {supplier.email && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Mail className="w-4 h-4 text-gray-500" />
-                                                <span className="truncate">{supplier.email}</span>
-                                            </div>
-                                        )}
-                                        {supplier.address && (
-                                            <div className="flex items-start gap-2 text-sm">
-                                                <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
-                                                <span className="line-clamp-2">{supplier.address}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                    <div className="bg-white rounded-lg border overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Nama Supplier
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Contact Person
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Telepon
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Email
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Alamat
+                                        </th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {filteredSuppliers.map((supplier) => (
+                                        <tr key={supplier.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3">
+                                                <div className="font-medium text-gray-900">{supplier.name}</div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="text-sm text-gray-600">{supplier.contact_person || '-'}</div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="text-sm text-gray-600 flex items-center gap-2">
+                                                    {supplier.phone ? (
+                                                        <>
+                                                            <Phone className="w-3 h-3 text-gray-400" />
+                                                            {supplier.phone}
+                                                        </>
+                                                    ) : '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="text-sm text-gray-600 flex items-center gap-2">
+                                                    {supplier.email ? (
+                                                        <>
+                                                            <Mail className="w-3 h-3 text-gray-400" />
+                                                            <span className="truncate max-w-[200px]">{supplier.email}</span>
+                                                        </>
+                                                    ) : '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="text-sm text-gray-600 flex items-start gap-2 max-w-[250px]">
+                                                    {supplier.address ? (
+                                                        <>
+                                                            <MapPin className="w-3 h-3 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                            <span className="line-clamp-2">{supplier.address}</span>
+                                                        </>
+                                                    ) : '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => openEditModal(supplier)}
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => openDeleteModal(supplier)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 

@@ -17,6 +17,12 @@ export interface Transaction {
     total: number;
     savedAt: string;
     keterangan?: string;
+    paymentTypeId?: string;
+    paymentTypeName?: string;
+    payment_status?: 'paid' | 'pending';
+    paid_amount?: number;
+    created_at?: string;
+    updated_at?: string;    
 }
 
 export function useTransaction() {
@@ -59,7 +65,20 @@ export function useTransaction() {
         loadTransactions();
     }, [loadTransactions]);
 
-    const saveInvoice = async (customer: CustomerInfo, items: CartItem[], total: number, keterangan?: string) => {
+    const saveInvoice = async (
+        customer: CustomerInfo, 
+        items: CartItem[], 
+        total: number, 
+        keterangan?: string, 
+        paymentTypeId?: string, 
+        paymentTypeName?: string,
+        paymentStatus: 'paid' | 'pending' = 'paid'
+    ) => {
+        const finalStatus = paymentStatus === 'pending' ? 'pending' : 'paid';
+        const paidAmount = finalStatus === 'paid' ? total : 0;
+        const finalPaymentTypeId = finalStatus === 'paid' ? paymentTypeId : undefined;
+        const finalPaymentTypeName = finalStatus === 'paid' ? paymentTypeName : undefined;
+
         const invoiceData: Transaction = {
             invoiceNumber,
             date,
@@ -67,7 +86,11 @@ export function useTransaction() {
             items,
             total,
             savedAt: new Date().toISOString(),
-            keterangan
+            keterangan,
+            paymentTypeId: finalPaymentTypeId,
+            paymentTypeName: finalPaymentTypeName,
+            payment_status: finalStatus,
+            paid_amount: paidAmount
         };
 
         try {

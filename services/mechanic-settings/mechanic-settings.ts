@@ -121,7 +121,9 @@ export async function getMechanicSettingByIdAction(mechanicId: number): Promise<
             .single();
 
         if (error && error.code !== 'PGRST116') {
-            console.error('Error fetching mechanic setting by ID:', error);
+            if (Object.keys(error).length > 0) {
+                console.error('Error fetching mechanic setting by ID:', error);
+            }
             return null;
         }
         return data;

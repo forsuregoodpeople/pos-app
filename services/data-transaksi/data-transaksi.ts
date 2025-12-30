@@ -19,7 +19,11 @@ interface TransactionRow {
     items: any; // JSON object
     total: number;
     keterangan: string | null;
+    payment_type_id: string | null;
+    payment_type_name: string | null;
     saved_at: string;
+    payment_status: string;
+    paid_amount: number;
     created_at: string;
     updated_at: string;
 }
@@ -48,7 +52,7 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
             throw new Error(`Gagal mengambil data transaksi dari database: ${error.message}`);
         }
 
-        const transactions: Transaction[] = (data as TransactionRow[]).map((row) => {
+        const transactions: any = (data as TransactionRow[]).map((row) => {
             const items = parseJson(row.items).map((item: any) => ({
                 id: item.id || '',
                 type: item.type || 'part',
@@ -76,7 +80,11 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
                 items: items,
                 total: Number(row.total),
                 savedAt: row.saved_at,
-                keterangan: row.keterangan || undefined
+                keterangan: row.keterangan || undefined,
+                paymentTypeId: row.payment_type_id || undefined,
+                paymentTypeName: row.payment_type_name || undefined,
+                payment_status: row.payment_status || 'paid',
+                paid_amount: Number(row.paid_amount) || 0
             };
         });
 
@@ -150,6 +158,8 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                 items: transaction.items,
                 total: transaction.total,
                 keterangan: transaction.keterangan || null,
+                payment_type_id: transaction.paymentTypeId || null,
+                payment_type_name: transaction.paymentTypeName || null,
                 saved_at: transaction.savedAt || new Date().toISOString()
             });
 
@@ -231,6 +241,10 @@ export async function updateTransactionAction(invoiceNumber: string, transaction
                 items: transaction.items,
                 total: transaction.total,
                 keterangan: transaction.keterangan || null,
+                payment_type_id: transaction.paymentTypeId || null,
+                payment_type_name: transaction.paymentTypeName || null,
+                payment_status: transaction.payment_status || 'paid',
+                paid_amount: transaction.paid_amount || 0,
                 saved_at: transaction.savedAt || new Date().toISOString()
             })
             .eq('invoice_number', invoiceNumber);

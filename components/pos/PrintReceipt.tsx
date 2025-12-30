@@ -870,6 +870,7 @@ interface PrintReceiptProps {
   biayaLain: number;
   total: number;
   keterangan?: string;
+  paymentTypeName?: string; // Add optional payment type name
   mechanics?: any[];
 }
 

@@ -1,17 +1,25 @@
-import React, { useState } from "react";
-import { Package, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { PurchaseCartItem } from "@/hooks/usePurchaseCart";
+"use client";
+import React, { useState, useEffect } from "react";
+import { Search } from "lucide-react";
+
+interface Part {
+    id: string;
+    name: string;
+    price: number;
+    purchase_price?: number;
+    quantity?: number;
+    type?: 'mutasi' | 'bengkel';
+    code?: string;
+    category?: string;
+    displayColumn?: string;
+}
 
 interface PurchaseProductGridProps {
-    parts: any[];
+    parts: Part[];
     searchQuery: string;
     onSearchChange: (query: string) => void;
-    onAddToCart: (item: { id: string; name: string; price: number }, type: "part") => void;
-    cartItems: PurchaseCartItem[];
-    isFullscreen: boolean;
+    onAddToCart: (item: { id: string; name: string; price: number; type?: 'mutasi' | 'bengkel'; code?: string }, type: "part") => void;
+    cartItems?: Array<{ id: string; qty: number }>;
 }
 
 export function PurchaseProductGrid({
@@ -19,147 +27,159 @@ export function PurchaseProductGrid({
     searchQuery,
     onSearchChange,
     onAddToCart,
-    cartItems,
-    isFullscreen
+    cartItems = [],
 }: PurchaseProductGridProps) {
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
+    const [partTypeFilter, setPartTypeFilter] = useState<'all' | 'mutasi' | 'bengkel'>('all');
+
+    // Reset filter when switching contexts
+    useEffect(() => {
+        setPartTypeFilter('all');
+    }, []);
+
+    const filteredParts = parts.filter((p) => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.category?.toLowerCase().includes(searchQuery.toLowerCase());
+        const itemType = p.type || 'mutasi'; // Default to mutasi
+        const matchesType = partTypeFilter === 'all' || itemType === partTypeFilter;
+        return matchesSearch && matchesType;
+    });
+
+    const isEmpty = filteredParts.length === 0;
+
+    const formatCurrency = (price: number) => {
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount);
+            maximumFractionDigits: 0,
+        }).format(price);
     };
-
-    const getStockStatus = (quantity: number) => {
-        if (quantity === 0) {
-            return { label: "Habis", color: "bg-red-100 text-red-800" };
-        } else if (quantity <= 5) {
-            return { label: "Rendah", color: "bg-yellow-100 text-yellow-800" };
-        }
-        return { label: "Tersedia", color: "bg-green-100 text-green-800" };
-    };
-
-    const filteredParts = parts.filter(part =>
-        part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        part.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        part.category?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Search Bar */}
-            <div className="p-4 bg-white border-b">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                        placeholder="Cari barang..."
+        <div className="flex-1 flex flex-col w-full h-full">
+            {/* Search Bar & Filters */}
+            <div className="w-full p-4 pb-0 flex flex-col gap-3 flex-shrink-0">
+                <div className="relative w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-10"
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm shadow-sm"
+                        placeholder="Cari barang..."
                     />
+                </div>
+
+                {/* Filter Chips for Parts */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setPartTypeFilter('all')}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            partTypeFilter === 'all'
+                                ? "bg-gray-800 text-white border-gray-800"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                    >
+                        Semua
+                    </button>
+                    <button
+                        onClick={() => setPartTypeFilter('mutasi')}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            partTypeFilter === 'mutasi'
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                    >
+                        Mutasi
+                    </button>
+                    <button
+                        onClick={() => setPartTypeFilter('bengkel')}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                            partTypeFilter === 'bengkel'
+                                ? "bg-orange-600 text-white border-orange-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                    >
+                        Bengkel
+                    </button>
                 </div>
             </div>
 
-            {/* Product Grid */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {filteredParts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                        <Package className="w-16 h-16 mb-4 opacity-30" />
-                        <p className="text-lg font-medium">Tidak ada barang ditemukan</p>
-                        <p className="text-sm mt-1">Coba kata kunci pencarian lain</p>
-                    </div>
-                ) : (
-                    <div className={`grid gap-4 ${
-                        isFullscreen 
-                            ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8' 
-                            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                    }`}>
-                        {filteredParts.map((part) => {
-                            const cartItem = cartItems.find(item => item.id === part.id);
-                            const cartQty = cartItem?.qty || 0;
-                            const stockStatus = getStockStatus(part.quantity || 0);
+            <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 w-full auto-rows-max">
+                    {isEmpty && (
+                        <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
+                            <div className="text-lg font-medium">
+                                {searchQuery
+                                    ? "Tidak ada hasil"
+                                    : "Belum ada data barang"
+                                }
+                            </div>
+                            {!searchQuery && (
+                                <div className="text-sm mt-1">
+                                    Tambahkan di menu Barang
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                            return (
-                                <div
-                                    key={part.id}
-                                    className="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group"
-                                    onClick={() => onAddToCart({
-                                        id: part.id,
-                                        name: part.name,
-                                        price: part.purchase_price || part.price || 0
-                                    }, "part")}
-                                >
-                                    {/* Product Image/Placeholder */}
-                                    <div className="aspect-square bg-gray-100 rounded-md mb-3 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                                        {part.image ? (
-                                            <img 
-                                                src={part.image} 
-                                                alt={part.name}
-                                                className="w-full h-full object-cover rounded-md"
-                                            />
-                                        ) : (
-                                            <Package className="w-8 h-8 text-gray-400" />
-                                        )}
+                    {filteredParts.map((item) => {
+                        const stock = Number(item.quantity ?? 0);
+                        const lowStock = stock <= 5;
+                        const itemType = item.type || 'mutasi';
+                        const displayPrice = item.purchase_price || item.price;
+
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onAddToCart({
+                                    id: item.id,
+                                    name: item.name,
+                                    price: displayPrice,
+                                    type: itemType,
+                                    code: item.id // ID is the code for parts
+                                }, "part")}
+                                className={[
+                                    "bg-white rounded-xl p-5 shadow-sm hover:shadow-lg active:scale-95 transition-all",
+                                    "text-left flex flex-col justify-between h-full border-2 border-transparent relative overflow-hidden",
+                                    "hover:border-green-500 min-h-[140px]"
+                                ].join(" ")}
+                            >
+                                {/* Type indicator badge */}
+                                <div className={`absolute top-0 right-0 px-3 py-1 text-xs uppercase font-bold text-white rounded-bl-lg ${
+                                    itemType === 'mutasi' ? 'bg-blue-400' : 'bg-orange-400'
+                                }`}>
+                                    {itemType === 'mutasi' ? 'M' : 'B'}
+                                </div>
+
+                                <div className="font-medium text-base text-gray-800 mb-3 line-clamp-2 min-h-[3rem] pr-6">
+                                    {item.name}
+                                </div>
+
+                                <div className="mt-auto">
+                                    <div className="text-green-600 font-bold text-lg">
+                                        {itemType === 'mutasi' 
+                                            ? (item.displayColumn || 'N/A')
+                                            : formatCurrency(displayPrice)
+                                        }
                                     </div>
 
-                                    {/* Product Info */}
-                                    <div className="space-y-2">
-                                        <div>
-                                            <h3 className="font-medium text-sm line-clamp-2 group-hover:text-blue-600 transition-colors">
-                                                {part.name}
-                                            </h3>
-                                            {part.code && (
-                                                <p className="text-xs text-gray-500">Kode: {part.code}</p>
-                                            )}
-                                            {part.category && (
-                                                <p className="text-xs text-gray-500">{part.category}</p>
-                                            )}
-                                        </div>
-
-                                        {/* Stock Status */}
-                                        <div className="flex items-center justify-between">
-                                            <Badge 
-                                                variant="secondary" 
-                                                className={`text-xs ${stockStatus.color} border-0`}
-                                            >
-                                                {stockStatus.label} ({part.quantity || 0})
-                                            </Badge>
-                                            {cartQty > 0 && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    {cartQty} di keranjang
-                                                </Badge>
-                                            )}
-                                        </div>
-
-                                        {/* Price */}
-                                        <div className="font-bold text-blue-600">
-                                            {formatCurrency(part.purchase_price || part.price || 0)}
-                                        </div>
-
-                                        {/* Add to Cart Button */}
-                                        <Button
-                                            size="sm"
-                                            className="w-full mt-2"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onAddToCart({
-                                                    id: part.id,
-                                                    name: part.name,
-                                                    price: part.purchase_price || part.price || 0
-                                                }, "part");
-                                            }}
-                                            disabled={part.quantity === 0}
+                                    <div
+                                        className={[
+                                                "text-sm mt-1.5 flex items-center justify-between",
+                                                lowStock ? "text-orange-600 font-medium" : "text-gray-500"
+                                            ].join(" ")}
                                         >
-                                            <Package className="w-3 h-3 mr-1" />
-                                            Tambah
-                                        </Button>
+                                        <span>Stok:</span>
+                                        <span className="font-semibold">{stock}</span>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
+                            </button>
+                        );
+                    })}
+
+                </div>
             </div>
         </div>
     );

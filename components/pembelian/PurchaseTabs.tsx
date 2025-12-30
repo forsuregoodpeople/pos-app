@@ -1,54 +1,36 @@
+"use client";
+
 import React from "react";
-import { Package, Maximize2, Minimize2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Maximize2, Minimize2 } from "lucide-react";
 
 interface PurchaseTabsProps {
-    isFullscreen: boolean;
-    onToggleFullscreen: () => void;
     partsCount: number;
+    onToggleFullscreen?: () => void;
+    isFullscreen?: boolean;
 }
 
-export function PurchaseTabs({
-    isFullscreen,
-    onToggleFullscreen,
-    partsCount
-}: PurchaseTabsProps) {
+export function PurchaseTabs({ partsCount, onToggleFullscreen, isFullscreen = false }: PurchaseTabsProps) {
     return (
-        <div className="bg-white border-b">
-            <div className="flex items-center justify-between p-4">
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <Package className="w-5 h-5 text-blue-600" />
-                        <h1 className="text-xl font-semibold">Pembelian Barang</h1>
-                    </div>
-                    
-                    <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <span>Data Barang:</span>
-                        <span className="font-medium text-blue-600">{partsCount}</span>
-                        <span>item</span>
-                    </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
+        <div className="bg-white border-b shrink-0">
+            <div className="flex justify-center items-center">
+                <button
+                    className="flex-1 py-3 px-4 font-semibold transition-colors text-sm sm:text-base bg-green-600 text-white"
+                >
+                    Barang ({partsCount})
+                </button>
+                {onToggleFullscreen && (
+                    <button
                         onClick={onToggleFullscreen}
-                        className="hidden md:flex"
+                        className="p-3 text-gray-600 hover:bg-gray-100 transition-colors"
+                        title={isFullscreen ? "Keluar Full Screen" : "Full Screen"}
                     >
                         {isFullscreen ? (
-                            <>
-                                <Minimize2 className="w-4 h-4 mr-2" />
-                                Keluar Fullscreen
-                            </>
+                            <Minimize2 className="w-5 h-5" />
                         ) : (
-                            <>
-                                <Maximize2 className="w-4 h-4 mr-2" />
-                                Fullscreen
-                            </>
+                            <Maximize2 className="w-5 h-5" />
                         )}
-                    </Button>
-                </div>
+                    </button>
+                )}
             </div>
         </div>
     );
