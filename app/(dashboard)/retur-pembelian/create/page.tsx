@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { useReturPembelian, usePembelian } from "@/hooks/usePembelian";
@@ -32,9 +33,10 @@ interface FormData {
 
 export default function CreateReturPembelianPage() {
     const router = useRouter();
+    const { user } = useAuth(); // Get current user
     const { createReturn } = useReturPembelian();
     const { purchases } = usePembelian();
-    
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         purchase_id: "",
@@ -74,8 +76,8 @@ export default function CreateReturPembelianPage() {
             setIsSubmitting(true);
 
             const returnItems = formData.return_items.map(item => {
-                 const purchaseItem = getPurchaseItems().find((pi: any) => pi.id === item.purchase_item_id);
-                 return {
+                const purchaseItem = getPurchaseItems().find((pi: any) => pi.id === item.purchase_item_id);
+                return {
                     purchase_item_id: item.purchase_item_id,
                     item_code: purchaseItem?.item_code,
                     quantity: item.quantity,
@@ -83,7 +85,12 @@ export default function CreateReturPembelianPage() {
                 };
             });
 
-            await createReturn(formData, returnItems);
+            // Pass created_by explicitly
+            await createReturn({
+                ...formData,
+                created_by: user?.id
+            }, returnItems);
+
             toast.success("Retur pembelian berhasil dibuat!");
             router.push("/retur-pembelian");
         } catch (error) {
@@ -107,10 +114,10 @@ export default function CreateReturPembelianPage() {
                 quantity: 1,
                 amount: purchaseItem.unit_price
             }];
-            
+
             // Calculate new total
             const newTotal = newItems.reduce((sum, item) => sum + item.amount, 0);
-            
+
             return {
                 ...prev,
                 return_items: newItems,
@@ -138,13 +145,13 @@ export default function CreateReturPembelianPage() {
             const unitPrice = purchaseItem?.unit_price || 0;
 
             if (field === 'quantity') {
-                newItems[index] = { 
-                    ...newItems[index], 
+                newItems[index] = {
+                    ...newItems[index],
                     quantity: value,
                     amount: value * unitPrice
                 };
             } else {
-                 newItems[index] = { ...newItems[index], [field]: value };
+                newItems[index] = { ...newItems[index], [field]: value };
             }
 
             const newTotal = newItems.reduce((sum, item) => sum + item.amount, 0);
@@ -163,7 +170,7 @@ export default function CreateReturPembelianPage() {
                         </Link>
                     </Button>
                     <div className="flex items-center gap-2">
-                         <div className="p-1.5 bg-black rounded-md">
+                        <div className="p-1.5 bg-black rounded-md">
                             <ArrowLeftRight className="w-4 h-4 text-white" />
                         </div>
                         <h1 className="text-base font-bold text-black tracking-tight">Buat Retur Pembelian</h1>
@@ -172,8 +179,8 @@ export default function CreateReturPembelianPage() {
                         <Button variant="ghost" size="sm" asChild className="hover:bg-neutral-100 text-neutral-600">
                             <Link href="/retur-pembelian">Batal</Link>
                         </Button>
-                        <Button 
-                            onClick={handleAddReturn} 
+                        <Button
+                            onClick={handleAddReturn}
                             disabled={isSubmitting}
                             size="sm"
                             className="bg-black hover:bg-neutral-800 text-white rounded-md px-6 font-medium"
@@ -191,11 +198,11 @@ export default function CreateReturPembelianPage() {
                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
                         {/* Section 1 */}
                         <div className="space-y-4">
-                             <div className="flex items-center gap-2 pb-2 border-b border-black/5">
+                            <div className="flex items-center gap-2 pb-2 border-b border-black/5">
                                 <Receipt className="w-4 h-4 text-neutral-500" />
                                 <span className="font-semibold text-sm text-neutral-900 uppercase tracking-widest">Detail Transaksi</span>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <Label className="text-xs font-medium text-neutral-500">SUMBER INVOICE</Label>
@@ -215,14 +222,14 @@ export default function CreateReturPembelianPage() {
                                     </Select>
                                     {formData.purchase_id && (
                                         <div className="text-xs text-neutral-500 bg-neutral-100 p-2 rounded border border-neutral-200 flex justify-between items-center">
-                                           <span>Total Invoice Asli</span>
-                                           <span className="font-mono font-medium">Rp {purchases.find(p => p.id === formData.purchase_id)?.final_amount.toLocaleString('id-ID')}</span>
+                                            <span>Total Invoice Asli</span>
+                                            <span className="font-mono font-medium">Rp {purchases.find(p => p.id === formData.purchase_id)?.final_amount.toLocaleString('id-ID')}</span>
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="space-y-2">
-                                     <Label className="text-xs font-medium text-neutral-500">TANGGAL RETUR</Label>
+                                    <Label className="text-xs font-medium text-neutral-500">TANGGAL RETUR</Label>
                                     <Input
                                         type="date"
                                         value={formData.return_date}
@@ -239,7 +246,7 @@ export default function CreateReturPembelianPage() {
                                 <AlertCircle className="w-4 h-4 text-neutral-500" />
                                 <span className="font-semibold text-sm text-neutral-900 uppercase tracking-widest">Keterangan</span>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <Label className="text-xs font-medium text-neutral-500">ALASAN UTAMA</Label>
@@ -251,7 +258,7 @@ export default function CreateReturPembelianPage() {
                                         className="bg-white border-neutral-300 focus-visible:ring-black resize-none text-sm rounded-md p-3"
                                     />
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <Label className="text-xs font-medium text-neutral-500">CATATAN TAMBAHAN</Label>
                                     <Textarea
@@ -271,16 +278,16 @@ export default function CreateReturPembelianPage() {
                 <div className="flex-1 flex flex-col bg-neutral-50/50">
                     {/* Items Header */}
                     <div className="flex-none p-6 border-b border-neutral-200 bg-white flex justify-between items-center">
-                         <div>
+                        <div>
                             <h2 className="text-lg font-bold text-black flex items-center gap-2">
                                 Daftar Item
                                 <Badge className="bg-black text-white hover:bg-black px-2 py-0.5 rounded-full text-xs">{formData.return_items.length}</Badge>
                             </h2>
                             <p className="text-sm text-neutral-500">Kelola item yang akan dikembalikan</p>
                         </div>
-                        
+
                         <div className="flex gap-2">
-                             <Button
+                            <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => {
@@ -291,7 +298,7 @@ export default function CreateReturPembelianPage() {
                                     }
                                     const addedIds = formData.return_items.map(i => i.purchase_item_id);
                                     const availableItem = items.find((i: any) => !addedIds.includes(i.id));
-                                    
+
                                     if (availableItem) {
                                         addReturnItem(availableItem);
                                     } else if (items.length > 0) {

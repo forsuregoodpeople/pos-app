@@ -7,8 +7,8 @@ Sistem invoice/POS untuk bengkel otomotif dengan database MySQL.
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Database**: MySQL (semua data: barang, jasa, mekanik, transaksi)
-- **Authentication**: Cookie-based dengan 24-hour timeout
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
 
 ## Getting Started
 
@@ -28,16 +28,13 @@ cp env.example .env.local
 Edit `.env.local` dan isi dengan nilai yang sesuai. Lihat [ENV_SETUP.md](./ENV_SETUP.md) untuk panduan lengkap.
 
 **Environment Variables yang diperlukan:**
-- MySQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-
-**Catatan:** Semua data sekarang disimpan di MySQL, tidak lagi menggunakan Google Sheets.
+- Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 
 ### 3. Setup Database
 
-Buat database MySQL:
-```bash
-mysql -u root -p < database/schema.sql
-```
+Pastikan project Supabase sudah dibuat. Jalankan migrasi di Supabase SQL Editor:
+1. Buka folder `supabase/migrations/`
+2. Jalankan script SQL secara berurutan.
 
 ### 4. Migrasi Data (Opsional)
 

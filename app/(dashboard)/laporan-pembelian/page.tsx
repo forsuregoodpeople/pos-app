@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { usePembelian } from "@/hooks/usePembelian";
 import { useSuppliers } from "@/hooks/usePembelian";
-import { Calendar, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Download, Filter, FileText, Users, Building, AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Download, Filter, FileText, Users, Building, AlertCircle, ArrowUpRight, ArrowDownRight, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,7 +180,7 @@ export default function LaporanPembelianPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             toast.success("Laporan pembelian berhasil diunduh!", { position: "bottom-right" });
         } catch (error) {
             console.error('Export error:', error);
@@ -192,7 +192,7 @@ export default function LaporanPembelianPage() {
     const getPaymentStatusBadge = (status: string, dueDate?: string, paidAmount?: number, finalAmount?: number) => {
         const remaining = (finalAmount || 0) - (paidAmount || 0);
         const isOverdue = dueDate && new Date(dueDate) < new Date() && remaining > 0;
-        
+
         if (isOverdue) {
             return (
                 <Badge variant="destructive" className="text-xs font-medium">
@@ -229,7 +229,7 @@ export default function LaporanPembelianPage() {
                         <Filter className="w-4 h-4 text-gray-500" />
                         <span className="text-sm font-medium">Filter:</span>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Select value={dateFilter} onValueChange={(value) => {
                             setDateFilter(value);
@@ -314,163 +314,6 @@ export default function LaporanPembelianPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Metrics Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Pembelian</CardTitle>
-                                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">
-                                        {filteredMetrics.totalPurchases}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Transaksi
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Nilai</CardTitle>
-                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-blue-600">
-                                        {formatCurrency(filteredMetrics.totalAmount)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Rata-rata: {formatCurrency(filteredMetrics.avgPurchaseValue)}
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Belum Dibayar</CardTitle>
-                                    <AlertCircle className="h-4 w-4 text-yellow-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-yellow-600">
-                                        {formatCurrency(filteredMetrics.pendingAmount)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Menunggu pembayaran
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Terlambat</CardTitle>
-                                    <TrendingDown className="h-4 w-4 text-red-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-red-600">
-                                        {formatCurrency(filteredMetrics.overdueAmount)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Perlu ditindaklanjuti
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Top Suppliers */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Building className="h-4 w-4" />
-                                        Top 5 Supplier
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Berdasarkan total nilai pembelian
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {filteredMetrics.topSuppliers.length > 0 ? (
-                                            filteredMetrics.topSuppliers.map((supplier, index) => (
-                                                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xs font-medium text-gray-500">#{index + 1}</span>
-                                                        <div>
-                                                            <div className="font-medium text-gray-900">{supplier.name}</div>
-                                                            <div className="text-xs text-gray-500">{supplier.count} transaksi</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-sm font-bold text-blue-600">
-                                                            {formatCurrency(supplier.amount)}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            Total
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center text-gray-500 py-8">
-                                                <Building className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                                <p className="text-sm">Belum ada data supplier</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        Distribusi Status
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Berdasarkan status pembayaran
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">Lunas</span>
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-2xl font-bold text-green-600">
-                                                    {formatCurrency(filteredMetrics.paidAmount)}
-                                                </div>
-                                                <Badge variant="secondary" className="bg-green-100 text-green-800 ml-2">
-                                                    {filteredMetrics.totalAmount > 0 ? ((filteredMetrics.paidAmount / filteredMetrics.totalAmount) * 100).toFixed(1) : 0}%
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">Pending</span>
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-2xl font-bold text-yellow-600">
-                                                    {formatCurrency(filteredMetrics.pendingAmount)}
-                                                </div>
-                                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 ml-2">
-                                                    {filteredMetrics.totalAmount > 0 ? ((filteredMetrics.pendingAmount / filteredMetrics.totalAmount) * 100).toFixed(1) : 0}%
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">Terlambat</span>
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-2xl font-bold text-red-600">
-                                                    {formatCurrency(filteredMetrics.overdueAmount)}
-                                                </div>
-                                                <Badge variant="secondary" className="bg-red-100 text-red-800 ml-2">
-                                                    {filteredMetrics.totalAmount > 0 ? ((filteredMetrics.overdueAmount / filteredMetrics.totalAmount) * 100).toFixed(1) : 0}%
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
                         {/* Purchases Table */}
                         <Card>
                             <CardHeader>

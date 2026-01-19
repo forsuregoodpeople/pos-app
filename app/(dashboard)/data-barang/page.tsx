@@ -45,12 +45,12 @@ function CollapsibleRow({ mutation, onDelete }: { mutation: DataBarangMutasi; on
                     <TableCell>{new Date(mutation.datePurchase).toLocaleDateString('id-ID')}</TableCell>
                     <TableCell className="text-right">{mutation.items.length} Item</TableCell>
                     <TableCell className="text-right">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                             onClick={async () => {
-                                if(confirm('Hapus data mutasi ini?')) {
+                                if (confirm('Hapus data mutasi ini?')) {
                                     await onDelete(mutation.transactionCode);
                                     toast.success('Data terhapus');
                                 }
@@ -97,12 +97,12 @@ function CollapsibleRow({ mutation, onDelete }: { mutation: DataBarangMutasi; on
 export default function DataBarangPage() {
     const { items, loading: loadingItems, updateItem, deleteItem, reload: reloadItems } = useDataBarang();
     const { mutations, loading: loadingMutations, deleteMutation, syncMutation, reload: reloadMutations } = useDataBarangMutasi();
-    
+
     const [searchTerm, setSearchTerm] = useState('');
     const [stockFilter, setStockFilter] = useState('all');
     const [activeTab, setActiveTab] = useState("mutasi");
     const [isClient, setIsClient] = useState(false);
-    
+
     // Add Modal State
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newItem, setNewItem] = useState({ code: '', name: '', price: 0, quantity: 0 });
@@ -140,17 +140,17 @@ export default function DataBarangPage() {
     const getFilteredItems = () => {
         return items.filter(item => {
             const itemType = item.type || 'mutasi'; // Fallback if undefined, though we usually filter by tab
-            const matchesType = itemType === 'bengkel'; 
-            
-            const matchesSearch = searchTerm === '' || 
+            const matchesType = itemType === 'bengkel';
+
+            const matchesSearch = searchTerm === '' ||
                 item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.name.toLowerCase().includes(searchTerm.toLowerCase());
-            
+
             const matchesStock = stockFilter === 'all' ||
                 (stockFilter === '0' && item.quantity === 0) ||
                 (stockFilter === 'less5' && item.quantity < 5) ||
                 (stockFilter === 'most' && item.quantity >= 10);
-            
+
             return matchesType && matchesSearch && matchesStock;
         }).sort((a, b) => {
             if (stockFilter === 'most') {
@@ -163,10 +163,21 @@ export default function DataBarangPage() {
     // Filter logic for Mutasi Transactions
     const getFilteredMutations = () => {
         return mutations.filter(m => {
-            const matchesSearch = searchTerm === '' ||
-                m.transactionCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                m.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-            return matchesSearch;
+            const term = searchTerm.toLowerCase();
+
+            if (term === '') return true;
+
+            const matchesHeader =
+                m.transactionCode.toLowerCase().includes(term) ||
+                m.customerName.toLowerCase().includes(term);
+
+            const matchesItems = m.items.some(item =>
+                item.itemName.toLowerCase().includes(term) ||
+                (item.supplierCode && item.supplierCode.toLowerCase().includes(term)) ||
+                (item.priceCode && String(item.priceCode).toLowerCase().includes(term))
+            );
+
+            return matchesHeader || matchesItems;
         });
     };
 
@@ -174,7 +185,7 @@ export default function DataBarangPage() {
         // Implement print logic based on active tab
         const content = activeTab === 'mutasi' ? getFilteredMutations() : getFilteredItems();
         // ... (Simplified print just ensures basic functionality for now)
-        window.print(); 
+        window.print();
     };
 
     const handleAddItem = async () => {
@@ -235,7 +246,7 @@ export default function DataBarangPage() {
                                     />
                                 </div>
                             </div>
-                            
+
                             {activeTab === 'bengkel' && isClient && (
                                 <div className="w-full sm:w-48">
                                     <Select value={stockFilter} onValueChange={setStockFilter}>
@@ -256,7 +267,7 @@ export default function DataBarangPage() {
                                 <Printer className="w-4 h-4 mr-2" />
                                 Cetak
                             </Button>
-                            
+
                             {activeTab === 'bengkel' && (
                                 <Button onClick={() => setIsAddOpen(true)} className="whitespace-nowrap">
                                     <Plus className="w-4 h-4 mr-2" />
@@ -267,12 +278,12 @@ export default function DataBarangPage() {
                     </div>
 
                     <TabsContent value="mutasi">
-                         <div className="text-sm text-gray-600 mb-4">
+                        <div className="text-sm text-gray-600 mb-4">
                             Menampilkan {getFilteredMutations().length} data transaksi mutasi
-                         </div>
-                        
+                        </div>
+
                         {/* Custom Table for Mutations since structure is different */}
-                         <div className="rounded-md border">
+                        <div className="rounded-md border">
                             <div className="relative w-full overflow-auto">
                                 <table className="w-full caption-bottom text-sm text-left">
                                     <thead className="[&_tr]:border-b">
@@ -333,12 +344,12 @@ export default function DataBarangPage() {
                                                                 <RefreshCw className="h-4 w-4 mr-1" />
                                                                 <span className="hidden sm:inline">Sync</span>
                                                             </Button>
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="sm" 
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
                                                                 className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
                                                                 onClick={async () => {
-                                                                    if(confirm(`Yakin ingin menghapus transaksi ${mutation.transactionCode}?\n\nData ini akan dihapus permanen dan tidak bisa dikembalikan.`)) {
+                                                                    if (confirm(`Yakin ingin menghapus transaksi ${mutation.transactionCode}?\n\nData ini akan dihapus permanen dan tidak bisa dikembalikan.`)) {
                                                                         try {
                                                                             await deleteMutation(mutation.transactionCode);
                                                                             toast.success('Transaksi berhasil dihapus');
@@ -358,16 +369,16 @@ export default function DataBarangPage() {
                                     </tbody>
                                 </table>
                             </div>
-                         </div>
-                         <p className="text-xs text-muted-foreground mt-4">
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-4">
                             * Data ini berasal dari tabel transaction_mutation (Scan Sheet).
-                         </p>
+                        </p>
                     </TabsContent>
 
                     <TabsContent value="bengkel">
                         <div className="text-sm text-gray-600 mb-4">
                             Menampilkan {getFilteredItems().length} data barang bengkel
-                         </div>
+                        </div>
                         <DataTable
                             items={getFilteredItems()}
                             loading={loadingItems}
@@ -376,9 +387,9 @@ export default function DataBarangPage() {
                             columns={columnsBengkel}
                             title="Data Barang Bengkel"
                         />
-                         <p className="text-xs text-muted-foreground mt-4">
+                        <p className="text-xs text-muted-foreground mt-4">
                             * Barang bengkel dikelola secara manual (CRUD).
-                         </p>
+                        </p>
                     </TabsContent>
                 </Tabs>
             </div>
@@ -481,7 +492,7 @@ export default function DataBarangPage() {
                                         <div key={idx} className="p-4 flex flex-col gap-3 hover:bg-muted/30 border-b last:border-0">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex-1">
-                                                     <div className="flex flex-col gap-1">
+                                                    <div className="flex flex-col gap-1">
                                                         <Label className="text-xs text-muted-foreground">Item Name (Original: {item.itemName})</Label>
                                                         <Input
                                                             value={customUpdates[item.itemName]?.itemName ?? item.itemName}
@@ -498,7 +509,7 @@ export default function DataBarangPage() {
                                                             className="h-8 text-sm"
                                                             placeholder="Nama Item"
                                                         />
-                                                     </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between">
@@ -534,19 +545,19 @@ export default function DataBarangPage() {
                             </div>
                         )}
                     </div>
-                    
+
                     <DialogFooter className="mt-4 gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => setIsSyncOpen(false)}
                             className="min-w-24"
                         >
                             Batal
                         </Button>
-                        <Button 
+                        <Button
                             onClick={async () => {
                                 if (selectedTransaction) {
-                                    if(confirm(`Yakin ingin mengupdate data stok dan nama item untuk transaksi ini?`)) {
+                                    if (confirm(`Yakin ingin mengupdate data stok dan nama item untuk transaksi ini?`)) {
                                         try {
                                             // Pass customUpdates instead of customQuantities
                                             await syncMutation(selectedTransaction, 'set', customUpdates);

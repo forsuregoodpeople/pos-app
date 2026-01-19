@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { DataJasa } from '@/hooks/useDataJasa';
 
 interface DataJasaRow {
@@ -13,6 +13,7 @@ interface DataJasaRow {
 
 export async function getJasaAction(): Promise<DataJasa[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('data_jasa')
             .select('*')
@@ -38,6 +39,7 @@ export async function getJasaAction(): Promise<DataJasa[]> {
 
 export async function updateJasaAction(jasa: DataJasa) {
     try {
+        const supabase = await createClient();
         const id = Number.parseInt(jasa.id);
         if (Number.isNaN(id)) {
             throw new TypeError(`ID Jasa tidak valid: ${jasa.id}`);
@@ -78,6 +80,7 @@ export async function updateJasaAction(jasa: DataJasa) {
 
 export async function deleteJasaAction(id: string) {
     try {
+        const supabase = await createClient();
         const jasaId = Number.parseInt(id);
         if (Number.isNaN(jasaId)) {
             throw new TypeError(`ID Jasa tidak valid: ${id}`);
@@ -118,6 +121,7 @@ export async function deleteJasaAction(id: string) {
 
 export async function addJasaAction(jasa: DataJasa): Promise<DataJasa> {
     try {
+        const supabase = await createClient();
         // Insert new jasa
         const { data, error } = await supabase
             .from('data_jasa')

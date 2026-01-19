@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      router.push('/');
+    }
+  }, [isLoggedIn, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,9 +28,10 @@ export default function LoginPage() {
 
     try {
       const result = await login(email, password);
-      
+
       if (result.success) {
         toast.success('Login berhasil!');
+        // Router push is handled by AuthContext state change or middleware, but explicit push is safe
         router.push('/');
       } else {
         toast.error('Login gagal: ' + (result.error || 'Terjadi kesalahan'));
@@ -43,7 +50,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900">SUNDA SERVIS</h1>
           <p className="mt-2 text-sm text-gray-600">Sistem Nota Bengkel</p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Login</CardTitle>
@@ -65,7 +72,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
@@ -78,7 +85,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                 />
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full"
@@ -87,32 +94,15 @@ export default function LoginPage() {
                 {isLoading ? 'Memproses...' : 'Login'}
               </Button>
             </form>
-            
-            <div className="mt-4 text-sm text-gray-600">
-              <p className="font-semibold mb-2">Default Login Credentials:</p>
-              
-              <div className="mb-3 p-2 bg-blue-50 rounded">
-                <p className="font-medium text-blue-800">Superadmin:</p>
-                <p>Email: {process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL}</p>
-                <p>Password: {process.env.NEXT_PUBLIC_SUPERADMIN_PASSWORD}</p>
-              </div>
-              
-              <div className="mb-3 p-2 bg-green-50 rounded">
-                <p className="font-medium text-green-800">Admin:</p>
-                <p>Email: {process.env.NEXT_PUBLIC_ADMIN_EMAIL}</p>
-                <p>Password: {process.env.NEXT_PUBLIC_ADMIN_PASSWORD}</p>
-              </div>
-              
-              <div className="mb-3 p-2 bg-yellow-50 rounded">
-                <p className="font-medium text-yellow-800">Karyawan:</p>
-                <p>Email: {process.env.NEXT_PUBLIC_KARYAWAN_EMAIL}</p>
-                <p>Password: {process.env.NEXT_PUBLIC_KARYAWAN_PASSWORD}</p>
-              </div>
-              
-              <p className="text-xs text-orange-600 mt-2">⚠️ Email confirmation required. Check Supabase Dashboard if login fails.</p>
-            </div>
           </CardContent>
         </Card>
+
+        {/* Development Helper: Show Credentials */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+          <p className="font-bold mb-1">Development Credentials:</p>
+          <p>Email: <code className="bg-yellow-100 px-1 rounded">superadmin@sunda-servis.com</code></p>
+          <p>Password: <code className="bg-yellow-100 px-1 rounded">superadmin_password123</code></p>
+        </div>
       </div>
     </div>
   );

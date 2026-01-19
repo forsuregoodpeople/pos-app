@@ -216,7 +216,23 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
 
-            </SidebarContent>
+                <SidebarGroup>
+                    <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem key="/users">
+                                <SidebarMenuButton asChild isActive={pathname === "/users"}>
+                                    <Link href="/users">
+                                        <UserCheck className="w-4 h-4" />
+                                        <span>Manajemen User</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+            </SidebarContent >
             <SidebarFooter className="border-t border-sidebar-border p-4">
                 <Button
                     variant="outline"
@@ -228,6 +244,6 @@ export function AppSidebar() {
                     Logout
                 </Button>
             </SidebarFooter>
-        </Sidebar>
+        </Sidebar >
     );
 }

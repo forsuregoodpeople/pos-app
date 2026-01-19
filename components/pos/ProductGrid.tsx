@@ -14,7 +14,10 @@ interface Part {
     price: number;
     quantity?: number;
     type?: 'mutasi' | 'bengkel';
+    code?: string;
     displayColumn?: string;
+    supplierCode?: string;
+    priceCode?: string | number;
 }
 
 interface ProductGridProps {
@@ -73,7 +76,13 @@ export default function ProductGrid({
     );
 
     const filteredParts = parts.filter((p) => {
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+            p.name.toLowerCase().includes(query) ||
+            (p.supplierCode && p.supplierCode.toLowerCase().includes(query)) ||
+            (p.priceCode && String(p.priceCode).toLowerCase().includes(query)) ||
+            (p.code && p.code.toLowerCase().includes(query)); // Also check standard code
+
         const itemType = p.type || 'mutasi'; // Default to mutasi
         const matchesType = partTypeFilter === 'all' || itemType === partTypeFilter;
         return matchesSearch && matchesType;
@@ -107,7 +116,7 @@ export default function ProductGrid({
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
-                        placeholder={`Cari ${activeTab === "services" ? "jasa" : "barang"}...`}
+                        placeholder={`Cari ${activeTab === "services" ? "jasa" : "barang"} (Nama, Kode)...`}
                     />
                 </div>
 
@@ -116,31 +125,28 @@ export default function ProductGrid({
                     <div className="flex gap-2">
                         <button
                             onClick={() => setPartTypeFilter('all')}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                partTypeFilter === 'all'
-                                    ? "bg-gray-800 text-white border-gray-800"
-                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'all'
+                                ? "bg-gray-800 text-white border-gray-800"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                }`}
                         >
                             Semua
                         </button>
                         <button
                             onClick={() => setPartTypeFilter('mutasi')}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                partTypeFilter === 'mutasi'
-                                    ? "bg-blue-600 text-white border-blue-600"
-                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'mutasi'
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                }`}
                         >
                             Mutasi
                         </button>
                         <button
                             onClick={() => setPartTypeFilter('bengkel')}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                                partTypeFilter === 'bengkel'
-                                    ? "bg-orange-600 text-white border-orange-600"
-                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'bengkel'
+                                ? "bg-orange-600 text-white border-orange-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                }`}
                         >
                             Bengkel
                         </button>
@@ -178,10 +184,12 @@ export default function ProductGrid({
                     {displayItems.map((item) => {
                         const isPart = activeTab === "parts";
                         const isService = activeTab === "services";
-                        
+
                         const stock: number = isPart ? Number((item as any).quantity ?? 0) : 0;
                         const lowStock = isPart && stock <= 5;
                         const itemType = (item as any).type || 'mutasi';
+                        // Cast to Part to access new fields safely
+                        const partItem = item as Part;
 
                         return (
                             <button
@@ -195,9 +203,8 @@ export default function ProductGrid({
                             >
                                 {/* Type indicator badge */}
                                 {isPart && (
-                                    <div className={`absolute top-0 right-0 px-2 py-0.5 text-[10px] uppercase font-bold text-white rounded-bl-lg ${
-                                        itemType === 'mutasi' ? 'bg-blue-400' : 'bg-orange-400'
-                                    }`}>
+                                    <div className={`absolute top-0 right-0 px-2 py-0.5 text-[10px] uppercase font-bold text-white rounded-bl-lg ${itemType === 'mutasi' ? 'bg-blue-400' : 'bg-orange-400'
+                                        }`}>
                                         {itemType === 'mutasi' ? 'M' : 'B'}
                                     </div>
                                 )}
@@ -205,6 +212,15 @@ export default function ProductGrid({
                                 <div className="font-medium text-sm text-gray-800 mb-2 line-clamp-2 min-h-[2.5rem] pr-4">
                                     {item.name}
                                 </div>
+
+                                {/* Internal Code Display */}
+                                {isPart && itemType === 'mutasi' && (partItem.supplierCode || partItem.priceCode) && (
+                                    <div className="mb-2 text-[10px] text-gray-500 font-mono bg-gray-50 p-1 rounded">
+                                        {partItem.supplierCode && <span>{partItem.supplierCode}</span>}
+                                        {partItem.supplierCode && partItem.priceCode && <span className="mx-1">|</span>}
+                                        {partItem.priceCode && <span>{partItem.priceCode}</span>}
+                                    </div>
+                                )}
 
                                 <div className="mt-auto">
                                     <div className={(isService ? "text-blue-600" : "text-green-600") + " font-bold text-sm"}>
@@ -214,10 +230,10 @@ export default function ProductGrid({
                                     {isPart && (
                                         <div
                                             className={[
-                                                    "text-xs mt-1 flex items-center justify-between",
-                                                    lowStock ? "text-orange-600 font-medium" : "text-gray-500"
-                                                ].join(" ")}
-                                            >
+                                                "text-xs mt-1 flex items-center justify-between",
+                                                lowStock ? "text-orange-600 font-medium" : "text-gray-500"
+                                            ].join(" ")}
+                                        >
                                             <span>Stok:</span>
                                             <span>{stock}</span>
                                         </div>

@@ -39,7 +39,7 @@ export function MechanicModal({
     const [searchQuery, setSearchQuery] = useState("");
     const [defaultShopCut, setDefaultShopCut] = useState("50");
     const [mechanicShopCuts, setMechanicShopCuts] = useState<Record<string, number>>({});
-    
+
     const { items: availableMechanics } = useDataMekanik();
     const { getGlobalSetting, getMechanicSetting } = useMechanicSettings();
 
@@ -113,7 +113,7 @@ export function MechanicModal({
             setLocalMechanics([]);
             return;
         }
-        
+
         const percentages = getDefaultPercentages(newCount);
         const updatedMechanics = localMechanics
             .filter(mechanic => mechanic.id !== id)
@@ -164,7 +164,7 @@ export function MechanicModal({
                                     </div>
                                 ) : (
                                     availableMechanics
-                                        .filter(m => 
+                                        .filter(m =>
                                             m.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
                                             !localMechanics.some(lm => lm.name === m.name)
                                         )
@@ -178,18 +178,18 @@ export function MechanicModal({
                                             </button>
                                         ))
                                 )}
-                                {availableMechanics.length > 0 && 
-                                    availableMechanics.filter(m => 
+                                {availableMechanics.length > 0 &&
+                                    availableMechanics.filter(m =>
                                         m.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
                                         !localMechanics.some(lm => lm.name === m.name)
                                     ).length === 0 && (
-                                    <div className="px-3 py-4 text-center text-sm text-gray-500">
-                                        {searchQuery.trim() 
-                                            ? "Mekanik tidak ditemukan atau sudah ditambahkan"
-                                            : "Semua mekanik sudah ditambahkan"
-                                        }
-                                    </div>
-                                )}
+                                        <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                            {searchQuery.trim()
+                                                ? "Mekanik tidak ditemukan atau sudah ditambahkan"
+                                                : "Semua mekanik sudah ditambahkan"
+                                            }
+                                        </div>
+                                    )}
                             </ScrollArea>
                         </div>
                     </div>
@@ -244,21 +244,20 @@ export function MechanicModal({
                     </div>
 
                     {localMechanics.length > 0 && (
-                        <div className={`rounded-lg p-3 text-sm ${
-                            getTotalPercentage() === 100 
-                                ? "bg-green-50 text-green-700 border border-green-200" 
-                                : getTotalPercentage() > 100 
+                        <div className={`rounded-lg p-3 text-sm ${getTotalPercentage() === 100
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : getTotalPercentage() > 100
                                 ? "bg-red-50 text-red-700 border border-red-200"
                                 : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                        }`}>
+                            }`}>
                             <div className="flex items-center justify-between">
                                 <span>Total Persentase:</span>
                                 <span className="font-bold">{getTotalPercentage()}%</span>
                             </div>
                             {getTotalPercentage() !== 100 && (
                                 <p className="text-xs mt-1">
-                                    {getTotalPercentage() > 100 
-                                        ? "Persentase melebihi 100%" 
+                                    {getTotalPercentage() > 100
+                                        ? "Persentase melebihi 100%"
                                         : "Sebaiknya total persentase 100%"}
                                 </p>
                             )}

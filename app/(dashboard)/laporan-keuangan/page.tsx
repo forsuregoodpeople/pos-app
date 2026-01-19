@@ -6,11 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-    TrendingUp, 
-    TrendingDown, 
-    DollarSign, 
-    CreditCard, 
+import {
+    TrendingUp,
+    TrendingDown,
+    DollarSign,
+    CreditCard,
     Wallet,
     FileText,
     Download,
@@ -22,6 +22,20 @@ import {
 import { useFinancialReports, useProfitLoss, useBalanceSheet, useCashFlow, useSeasonalityAnalysis } from "@/hooks/useFinancialReports";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { addExpenseAction } from "@/services/expenses/expenses";
+import { toast } from "sonner"; // Try using sonner
+
 
 export default function LaporanKeuanganPage() {
     const {
@@ -41,7 +55,60 @@ export default function LaporanKeuanganPage() {
 
     const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
     const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
+
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+    // Expense Modal State
+    const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newExpense, setNewExpense] = useState({
+        description: '',
+        amount: '',
+        category: 'Beban Operasional',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        notes: ''
+    });
+
+    const handleAddExpense = async () => {
+        if (!newExpense.description || !newExpense.amount) {
+            alert("Mohon isi deskripsi dan jumlah");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            await addExpenseAction({
+                description: newExpense.description,
+                amount: Number(newExpense.amount),
+                category: newExpense.category,
+                date: newExpense.date,
+                notes: newExpense.notes
+            });
+
+            setIsExpenseModalOpen(false);
+            setNewExpense({
+                description: '',
+                amount: '',
+                category: 'Beban Operasional',
+                date: format(new Date(), 'yyyy-MM-dd'),
+                notes: ''
+            });
+
+            // Refresh data
+            calculateProfitLoss(startDate, endDate);
+            calculateBalanceSheet(startDate, endDate);
+            calculateCashFlow(startDate, endDate);
+
+            // Basic alert since we aren't sure about toast setup
+            alert("Pengeluaran berhasil dicatat!");
+        } catch (error) {
+            console.error(error);
+            alert("Gagal mencatat pengeluaran");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     useEffect(() => {
         // Load data when component mounts or period changes
@@ -99,23 +166,11 @@ export default function LaporanKeuanganPage() {
                         Analisis lengkap kinerja keuangan bisnis Anda
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="px-3 py-2 border rounded-md text-sm"
-                        />
-                        <span className="text-sm">sampai</span>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="px-3 py-2 border rounded-md text-sm"
-                        />
-                    </div>
+                <div className="flex gap-2">
+                    <Button onClick={() => setIsExpenseModalOpen(true)}>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Catat Pengeluaran
+                    </Button>
                     <Button variant="outline" size="sm">
                         <Download className="h-4 w-4 mr-2" />
                         Export
@@ -197,10 +252,11 @@ export default function LaporanKeuanganPage() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
+            </div >
 
             {/* Main Tabs */}
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-4">
+            < Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)
+            } className="space-y-4" >
                 <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="overview">Ringkasan</TabsTrigger>
                     <TabsTrigger value="profit-loss">Laba Rugi</TabsTrigger>
@@ -761,14 +817,13 @@ export default function LaporanKeuanganPage() {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="text-2xl font-bold">
-                                                    <span className={`${
-                                                        seasonalityData.insights.trend === 'increasing' ? 'text-green-600' :
+                                                    <span className={`${seasonalityData.insights.trend === 'increasing' ? 'text-green-600' :
                                                         seasonalityData.insights.trend === 'decreasing' ? 'text-red-600' :
-                                                        'text-yellow-600'
-                                                    }`}>
+                                                            'text-yellow-600'
+                                                        }`}>
                                                         {seasonalityData.insights.trend === 'increasing' ? '📈 Meningkat' :
-                                                         seasonalityData.insights.trend === 'decreasing' ? '📉 Menurun' :
-                                                         '📊 Stabil'}
+                                                            seasonalityData.insights.trend === 'decreasing' ? '📉 Menurun' :
+                                                                '📊 Stabil'}
                                                     </span>
                                                 </div>
                                             </CardContent>
@@ -780,14 +835,13 @@ export default function LaporanKeuanganPage() {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="text-2xl font-bold">
-                                                    <span className={`${
-                                                        seasonalityData.insights.volatility === 'high' ? 'text-red-600' :
+                                                    <span className={`${seasonalityData.insights.volatility === 'high' ? 'text-red-600' :
                                                         seasonalityData.insights.volatility === 'low' ? 'text-green-600' :
-                                                        'text-yellow-600'
-                                                    }`}>
+                                                            'text-yellow-600'
+                                                        }`}>
                                                         {seasonalityData.insights.volatility === 'high' ? '🔴 Tinggi' :
-                                                         seasonalityData.insights.volatility === 'low' ? '🟢 Rendah' :
-                                                         '🟡 Sedang'}
+                                                            seasonalityData.insights.volatility === 'low' ? '🟢 Rendah' :
+                                                                '🟡 Sedang'}
                                                     </span>
                                                 </div>
                                             </CardContent>
@@ -799,14 +853,13 @@ export default function LaporanKeuanganPage() {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="text-2xl font-bold">
-                                                    <span className={`${
-                                                        seasonalityData.insights.predictability === 'high' ? 'text-green-600' :
+                                                    <span className={`${seasonalityData.insights.predictability === 'high' ? 'text-green-600' :
                                                         seasonalityData.insights.predictability === 'low' ? 'text-red-600' :
-                                                        'text-yellow-600'
-                                                    }`}>
+                                                            'text-yellow-600'
+                                                        }`}>
                                                         {seasonalityData.insights.predictability === 'high' ? '✅ Tinggi' :
-                                                         seasonalityData.insights.predictability === 'low' ? '❌ Rendah' :
-                                                         '⚠️ Sedang'}
+                                                            seasonalityData.insights.predictability === 'low' ? '❌ Rendah' :
+                                                                '⚠️ Sedang'}
                                                     </span>
                                                 </div>
                                             </CardContent>
@@ -840,11 +893,10 @@ export default function LaporanKeuanganPage() {
                                                             <td className="border p-2 text-right">
                                                                 {data.expenses > 0 ? formatCurrency(data.expenses) : '-'}
                                                             </td>
-                                                            <td className={`border p-2 text-right font-medium ${
-                                                                data.profit > 0 ? 'text-green-600' : data.profit < 0 ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
+                                                            <td className={`border p-2 text-right font-medium ${data.profit > 0 ? 'text-green-600' : data.profit < 0 ? 'text-red-600' : 'text-gray-600'
+                                                                }`}>
                                                                 {data.profit !== 0 ? formatCurrency(data.profit) :
-                                                                 data.profit < 0 ? `(${formatCurrency(Math.abs(data.profit))})` : '-'}
+                                                                    data.profit < 0 ? `(${formatCurrency(Math.abs(data.profit))})` : '-'}
                                                             </td>
                                                             <td className="border p-2 text-right">
                                                                 {data.transaction_count > 0 ? data.transaction_count : '-'}
@@ -852,19 +904,17 @@ export default function LaporanKeuanganPage() {
                                                             <td className="border p-2 text-right">
                                                                 {data.average_transaction_value > 0 ? formatCurrency(data.average_transaction_value) : '-'}
                                                             </td>
-                                                            <td className={`border p-2 text-right font-medium ${
-                                                                data.growth_rate >= 0 ? 'text-green-600' :
+                                                            <td className={`border p-2 text-right font-medium ${data.growth_rate >= 0 ? 'text-green-600' :
                                                                 data.growth_rate < 0 ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
+                                                                }`}>
                                                                 {data.growth_rate !== 0 ?
                                                                     (data.growth_rate > 0 ? '+' : '') + data.growth_rate.toFixed(1) + '%' :
                                                                     '-'
                                                                 }
                                                             </td>
-                                                            <td className={`border p-2 text-right font-medium ${
-                                                                data.seasonal_index >= 100 ? 'text-green-600' :
+                                                            <td className={`border p-2 text-right font-medium ${data.seasonal_index >= 100 ? 'text-green-600' :
                                                                 data.seasonal_index < 100 ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
+                                                                }`}>
                                                                 {data.seasonal_index > 0 ? data.seasonal_index.toFixed(0) : '-'}
                                                             </td>
                                                         </tr>
@@ -958,17 +1008,15 @@ export default function LaporanKeuanganPage() {
                                                             <td className="border p-2 text-right">
                                                                 {data.total_expenses > 0 ? formatCurrency(data.total_expenses) : '-'}
                                                             </td>
-                                                            <td className={`border p-2 text-right font-medium ${
-                                                                data.total_profit > 0 ? 'text-green-600' :
+                                                            <td className={`border p-2 text-right font-medium ${data.total_profit > 0 ? 'text-green-600' :
                                                                 data.total_profit < 0 ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
+                                                                }`}>
                                                                 {data.total_profit !== 0 ? formatCurrency(data.total_profit) :
-                                                                 data.total_profit < 0 ? `(${formatCurrency(Math.abs(data.total_profit))})` : '-'}
+                                                                    data.total_profit < 0 ? `(${formatCurrency(Math.abs(data.total_profit))})` : '-'}
                                                             </td>
-                                                            <td className={`border p-2 text-right font-medium ${
-                                                                data.growth_rate >= 0 ? 'text-green-600' :
+                                                            <td className={`border p-2 text-right font-medium ${data.growth_rate >= 0 ? 'text-green-600' :
                                                                 data.growth_rate < 0 ? 'text-red-600' : 'text-gray-600'
-                                                            }`}>
+                                                                }`}>
                                                                 {data.growth_rate !== 0 ?
                                                                     (data.growth_rate > 0 ? '+' : '') + data.growth_rate.toFixed(1) + '%' :
                                                                     '-'
@@ -990,6 +1038,84 @@ export default function LaporanKeuanganPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <Dialog open={isExpenseModalOpen} onOpenChange={setIsExpenseModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Catat Pengeluaran Operasional</DialogTitle>
+                        <DialogDescription>
+                            Catat biaya operasional seperti listrik, gaji, sewa, dll.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="date">Tanggal</Label>
+                            <Input
+                                id="date"
+                                type="date"
+                                value={newExpense.date}
+                                onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="category">Kategori</Label>
+                            <Select
+                                value={newExpense.category}
+                                onValueChange={(value) => setNewExpense({ ...newExpense, category: value })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Pilih Kategori" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Gaji & Upah">Gaji & Upah</SelectItem>
+                                    <SelectItem value="Komisi Mekanik">Komisi Mekanik</SelectItem>
+                                    <SelectItem value="Listrik, Air & Internet">Listrik, Air & Internet</SelectItem>
+                                    <SelectItem value="Sewa Gedung">Sewa Gedung</SelectItem>
+                                    <SelectItem value="Perlengkapan">Perlengkapan</SelectItem>
+                                    <SelectItem value="Pemasaran">Pemasaran</SelectItem>
+                                    <SelectItem value="Pemeliharaan">Pemeliharaan</SelectItem>
+                                    <SelectItem value="Beban Admin">Beban Admin</SelectItem>
+                                    <SelectItem value="Beban Operasional">Lain-lain</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">Keterangan</Label>
+                            <Input
+                                id="description"
+                                placeholder="Contoh: Bayar listrik bulan Januari"
+                                value={newExpense.description}
+                                onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="amount">Jumlah (Rp)</Label>
+                            <Input
+                                id="amount"
+                                type="number"
+                                placeholder="0"
+                                value={newExpense.amount}
+                                onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="notes">Catatan Tambahan (Opsional)</Label>
+                            <Input
+                                id="notes"
+                                placeholder="Catatan detail..."
+                                value={newExpense.notes}
+                                onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsExpenseModalOpen(false)}>Batal</Button>
+                        <Button onClick={handleAddExpense} disabled={isSubmitting}>
+                            {isSubmitting ? 'Menyimpan...' : 'Simpan Pengeluaran'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

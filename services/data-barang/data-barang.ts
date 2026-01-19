@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { Part } from '@/hooks/useProducts';
 import { CartItem } from '@/hooks';
 
@@ -19,6 +19,7 @@ interface DataBarangRow {
 
 export async function getPartsAction(): Promise<Part[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('data_barang')
             .select('*')
@@ -47,6 +48,7 @@ export async function getPartsAction(): Promise<Part[]> {
 
 export async function updateStockAction(items: CartItem[]): Promise<{ success: boolean }> {
     try {
+        const supabase = await createClient();
         for (const item of items) {
             // Only update stock for parts, not services
             if (item.type !== 'part') {
@@ -98,6 +100,7 @@ export async function updateStockAction(items: CartItem[]): Promise<{ success: b
 
 export async function updatePartAction(code: string, updates: { code?: string; name?: string; price?: number; quantity?: number; type?: 'mutasi' | 'bengkel' }) {
     try {
+        const supabase = await createClient();
         // Check if part exists
         const { data: existingRows, error } = await supabase
             .from('data_barang')
@@ -178,6 +181,7 @@ export async function updatePartAction(code: string, updates: { code?: string; n
 
 export async function addPartAction(item: { code: string; name: string; price: number; quantity?: number; type?: 'mutasi' | 'bengkel' }) {
     try {
+        const supabase = await createClient();
         // Check if code already exists
         const { data: existingRows, error } = await supabase
             .from('data_barang')
@@ -222,6 +226,7 @@ export async function addPartAction(item: { code: string; name: string; price: n
 
 export async function deletePartAction(id: string) {
     try {
+        const supabase = await createClient();
         // Check if part exists
         const { data: existingRows, error } = await supabase
             .from('data_barang')
@@ -257,6 +262,7 @@ export async function deletePartAction(id: string) {
 
 export async function adjustStockAction(code: string, delta: number) {
     try {
+        const supabase = await createClient();
         const { data: currentRows, error } = await supabase
             .from('data_barang')
             .select('quantity')

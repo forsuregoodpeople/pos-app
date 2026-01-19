@@ -12,6 +12,8 @@ interface Part {
     code?: string;
     category?: string;
     displayColumn?: string;
+    supplierCode?: string;
+    priceCode?: string | number;
 }
 
 interface PurchaseProductGridProps {
@@ -37,9 +39,13 @@ export function PurchaseProductGrid({
     }, []);
 
     const filteredParts = parts.filter((p) => {
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.category?.toLowerCase().includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = p.name.toLowerCase().includes(query) ||
+            p.code?.toLowerCase().includes(query) ||
+            p.category?.toLowerCase().includes(query) ||
+            (p.supplierCode && p.supplierCode.toLowerCase().includes(query)) ||
+            (p.priceCode && String(p.priceCode).toLowerCase().includes(query));
+
         const itemType = p.type || 'mutasi'; // Default to mutasi
         const matchesType = partTypeFilter === 'all' || itemType === partTypeFilter;
         return matchesSearch && matchesType;
@@ -67,7 +73,7 @@ export function PurchaseProductGrid({
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm shadow-sm"
-                        placeholder="Cari barang..."
+                        placeholder="Cari barang (Nama, Kode)..."
                     />
                 </div>
 
@@ -75,31 +81,28 @@ export function PurchaseProductGrid({
                 <div className="flex gap-2">
                     <button
                         onClick={() => setPartTypeFilter('all')}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            partTypeFilter === 'all'
-                                ? "bg-gray-800 text-white border-gray-800"
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'all'
+                            ? "bg-gray-800 text-white border-gray-800"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            }`}
                     >
                         Semua
                     </button>
                     <button
                         onClick={() => setPartTypeFilter('mutasi')}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            partTypeFilter === 'mutasi'
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'mutasi'
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            }`}
                     >
                         Mutasi
                     </button>
                     <button
                         onClick={() => setPartTypeFilter('bengkel')}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                            partTypeFilter === 'bengkel'
-                                ? "bg-orange-600 text-white border-orange-600"
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        }`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${partTypeFilter === 'bengkel'
+                            ? "bg-orange-600 text-white border-orange-600"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            }`}
                     >
                         Bengkel
                     </button>
@@ -107,7 +110,7 @@ export function PurchaseProductGrid({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 w-full auto-rows-max">
+                <div className="grid gap-2 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 w-full auto-rows-max">
                     {isEmpty && (
                         <div className="col-span-full flex flex-col items-center justify-center py-12 text-gray-400">
                             <div className="text-lg font-medium">
@@ -141,25 +144,33 @@ export function PurchaseProductGrid({
                                     code: item.id // ID is the code for parts
                                 }, "part")}
                                 className={[
-                                    "bg-white rounded-xl p-5 shadow-sm hover:shadow-lg active:scale-95 transition-all",
-                                    "text-left flex flex-col justify-between h-full border-2 border-transparent relative overflow-hidden",
-                                    "hover:border-green-500 min-h-[140px]"
+                                    "bg-white rounded-lg p-3 shadow-sm hover:shadow-md active:scale-95 transition-all",
+                                    "text-left flex flex-col justify-between h-full border border-gray-100 relative overflow-hidden",
+                                    "hover:border-green-500 min-h-[100px]"
                                 ].join(" ")}
                             >
                                 {/* Type indicator badge */}
-                                <div className={`absolute top-0 right-0 px-3 py-1 text-xs uppercase font-bold text-white rounded-bl-lg ${
-                                    itemType === 'mutasi' ? 'bg-blue-400' : 'bg-orange-400'
-                                }`}>
+                                <div className={`absolute top-0 right-0 px-1.5 py-0.5 text-[10px] uppercase font-bold text-white rounded-bl-md ${itemType === 'mutasi' ? 'bg-blue-400' : 'bg-orange-400'
+                                    }`}>
                                     {itemType === 'mutasi' ? 'M' : 'B'}
                                 </div>
 
-                                <div className="font-medium text-base text-gray-800 mb-3 line-clamp-2 min-h-[3rem] pr-6">
+                                <div className="font-medium text-sm text-gray-800 mb-2 line-clamp-2 min-h-[2.5rem] pr-4 leading-tight">
                                     {item.name}
                                 </div>
 
+                                {/* Internal Code Display - Compact */}
+                                {itemType === 'mutasi' && (item.supplierCode || item.priceCode) && (
+                                    <div className="mb-2 text-[9px] text-gray-500 font-mono bg-gray-50 px-1 py-0.5 rounded truncate">
+                                        {item.supplierCode && <span>{item.supplierCode}</span>}
+                                        {item.supplierCode && item.priceCode && <span className="mx-1">|</span>}
+                                        {item.priceCode && <span>{item.priceCode}</span>}
+                                    </div>
+                                )}
+
                                 <div className="mt-auto">
-                                    <div className="text-green-600 font-bold text-lg">
-                                        {itemType === 'mutasi' 
+                                    <div className="text-green-600 font-bold text-sm">
+                                        {itemType === 'mutasi'
                                             ? (item.displayColumn || 'N/A')
                                             : formatCurrency(displayPrice)
                                         }
@@ -167,10 +178,10 @@ export function PurchaseProductGrid({
 
                                     <div
                                         className={[
-                                                "text-sm mt-1.5 flex items-center justify-between",
-                                                lowStock ? "text-orange-600 font-medium" : "text-gray-500"
-                                            ].join(" ")}
-                                        >
+                                            "text-xs mt-1 flex items-center justify-between",
+                                            lowStock ? "text-orange-600 font-medium" : "text-gray-500"
+                                        ].join(" ")}
+                                    >
                                         <span>Stok:</span>
                                         <span className="font-semibold">{stock}</span>
                                     </div>

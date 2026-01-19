@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { Transaction } from '@/hooks/useTransaction';
 import { calculateCommissionForMechanicsAction, CommissionCalculation } from '@/services/mechanic-settings/mechanic-settings';
 
@@ -39,8 +39,54 @@ const parseJson = (data: any): any => {
     }
 };
 
+export async function getNextInvoiceNumberAction(): Promise<string> {
+    try {
+        const supabase = await createClient();
+
+        // Get the last invoice number from the database
+        const { data, error } = await supabase
+            .from('data_transaksi')
+            .select('invoice_number')
+            .order('id', { ascending: false })
+            .limit(1);
+
+        if (error) {
+            console.error('Error fetching last invoice number:', error);
+            // If there's an error, start from 100
+            return 'INV-00100';
+        }
+
+        // If no invoices exist, start from 100
+        if (!data || data.length === 0) {
+            return 'INV-00100';
+        }
+
+        // Extract the number from the last invoice
+        const lastInvoice = data[0].invoice_number;
+
+        // Try to extract number from various formats
+        // Handle formats like: INV-00100, INV-100, INV-20250119-100, etc.
+        const numberMatch = lastInvoice.match(/(\d+)$/);
+
+        if (numberMatch) {
+            const lastNumber = parseInt(numberMatch[1], 10);
+            const nextNumber = lastNumber + 1;
+            // Format with 5-digit zero padding
+            return `INV-${String(nextNumber).padStart(5, '0')}`;
+        }
+
+        // If we can't parse the last invoice, start from 100
+        return 'INV-00100';
+    } catch (error) {
+        console.error('Error getting next invoice number:', error);
+        // If there's any error, start from 100
+        return 'INV-00100';
+    }
+}
+
 export async function getTransactionsAction(): Promise<Transaction[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('data_transaksi')
             .select('*')
@@ -97,6 +143,7 @@ export async function getTransactionsAction(): Promise<Transaction[]> {
 
 export async function saveTransactionAction(transaction: Transaction): Promise<Transaction> {
     try {
+        const supabase = await createClient();
         // Check if invoice number already exists
         const { data: existingRows, error } = await supabase
             .from('data_transaksi')
@@ -121,7 +168,7 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                     mechanic_id: m.id,
                     percentage: m.percentage
                 }));
-                
+
                 mechanicCommissions = await calculateCommissionForMechanicsAction(
                     mechanicIds,
                     transaction.total,
@@ -135,14 +182,14 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
 
         // Insert transaction with commission data
         // Note: mechanic_commissions is tracked in the mechanic_performance table instead
-        
+
         // Validate customer_tipe - must be 'umum' or 'perusahaan'
         const validCustomerTipes = ['umum', 'perusahaan'];
-        const customerTipe = validCustomerTipes.includes(transaction.customer.tipe) 
-            ? transaction.customer.tipe 
+        const customerTipe = validCustomerTipes.includes(transaction.customer.tipe)
+            ? transaction.customer.tipe
             : 'umum';
-        
-        const { error: insertError } = await supabase
+
+        const { data: savedTransaction, error: insertError } = await supabase
             .from('data_transaksi')
             .insert({
                 invoice_number: transaction.invoiceNumber,
@@ -161,7 +208,9 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                 payment_type_id: transaction.paymentTypeId || null,
                 payment_type_name: transaction.paymentTypeName || null,
                 saved_at: transaction.savedAt || new Date().toISOString()
-            });
+            })
+            .select()
+            .single();
 
         if (insertError) {
             console.error('Error saving transaction:', insertError);
@@ -169,13 +218,16 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
         }
 
         // Also save to mechanic_performance table for tracking
-        if (mechanicCommissions.length > 0) {
+        if (mechanicCommissions.length > 0 && savedTransaction) {
             try {
+                console.log('[saveTransactionAction] Saving mechanic performance for transaction:', savedTransaction.id);
+                console.log('[saveTransactionAction] Mechanic commissions:', mechanicCommissions);
+
                 const performanceRecords = mechanicCommissions.map(commission => ({
                     mechanic_id: commission.mechanic_id,
-                    transaction_id: transaction.invoiceNumber,
+                    transaction_id: savedTransaction.id, // Use the actual ID from the saved transaction
                     transaction_date: transaction.date,
-                    service_type: 'service' as const,
+                    service_type: 'service',
                     service_name: 'Transaction Commission',
                     quantity: 1,
                     unit_price: commission.final_commission_amount,
@@ -186,18 +238,28 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
                     notes: `Shop cut: ${commission.shop_cut_percentage}%, Final commission: ${commission.final_commission_amount}`
                 }));
 
-                const { error: performanceError } = await supabase
+                console.log('[saveTransactionAction] Performance records to insert:', performanceRecords);
+
+                const { data: insertedPerformance, error: performanceError } = await supabase
                     .from('mechanic_performance')
-                    .insert(performanceRecords);
+                    .insert(performanceRecords)
+                    .select();
 
                 if (performanceError) {
-                    console.error('Error saving mechanic performance:', performanceError);
+                    console.error('[saveTransactionAction] Error saving mechanic performance:', performanceError);
                     // Don't fail the transaction if performance tracking fails
+                } else {
+                    console.log('[saveTransactionAction] Successfully saved mechanic performance:', insertedPerformance);
                 }
             } catch (performanceError) {
-                console.error('Error saving mechanic performance:', performanceError);
+                console.error('[saveTransactionAction] Exception while saving mechanic performance:', performanceError);
                 // Don't fail the transaction if performance tracking fails
             }
+        } else {
+            console.log('[saveTransactionAction] Skipping mechanic performance save:', {
+                hasCommissions: mechanicCommissions.length > 0,
+                hasSavedTransaction: !!savedTransaction
+            });
         }
 
         return transaction;
@@ -209,6 +271,7 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
 
 export async function updateTransactionAction(invoiceNumber: string, transaction: Transaction): Promise<Transaction> {
     try {
+        const supabase = await createClient();
         // Check if transaction exists
         const { data: existingRows, error } = await supabase
             .from('data_transaksi')
@@ -263,6 +326,7 @@ export async function updateTransactionAction(invoiceNumber: string, transaction
 
 export async function deleteTransactionAction(invoiceNumber: string) {
     try {
+        const supabase = await createClient();
         // Check if transaction exists
         const { data: existingRows, error } = await supabase
             .from('data_transaksi')

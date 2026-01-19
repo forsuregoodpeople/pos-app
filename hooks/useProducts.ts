@@ -13,6 +13,8 @@ export interface Part {
     category?: string;
     image?: string;
     displayColumn?: string;
+    supplierCode?: string;
+    priceCode?: string | number;
 }
 
 export function useProducts() {
@@ -31,7 +33,7 @@ export function useProducts() {
             ]);
 
             // Flatten mutations into parts
-            const mutationParts: Part[] = mutations.flatMap(mutation => 
+            const mutationParts: Part[] = mutations.flatMap(mutation =>
                 mutation.items.map((item, index) => ({
                     id: `MUT-${mutation.transactionCode}-${item.id || index}`, // Ensure unique ID
                     code: item.transactionCode, // Use transaction code as item code or keep it distinct
@@ -41,13 +43,15 @@ export function useProducts() {
                     quantity: item.quantity,
                     type: 'mutasi', // Explicitly mark as mutasi
                     category: 'Mutasi',
-                    purchase_price: 0 // Optional default
+                    purchase_price: 0, // Optional default
+                    supplierCode: item.supplierCode,
+                    priceCode: item.priceCode
                 }))
             );
 
             // Merge existing parts with mutation parts
             const allParts = [...remoteParts, ...mutationParts];
-            
+
             setParts(allParts);
             return allParts;
         } catch (err: any) {
@@ -87,7 +91,7 @@ export function useProducts() {
             const errorMessage = err?.message || 'Gagal update data.';
             setError(errorMessage);
             console.error('Update part error:', err);
-            await syncPartsFromGoogleSheets(); 
+            await syncPartsFromGoogleSheets();
         } finally {
             setLoading(false);
         }
@@ -95,7 +99,7 @@ export function useProducts() {
 
     const deletePart = async (id: string) => {
         setLoading(true);
-        const prevParts = parts; 
+        const prevParts = parts;
         try {
             setParts(prev => prev.filter(p => p.id !== id));
             // Check if it's a mutation part (starts with MUT-)

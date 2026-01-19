@@ -6,6 +6,7 @@ import {
     getChartOfAccountsAction,
     getJournalEntriesAction,
     calculateProfitLossAction,
+    calculateBalanceSheetAction,
     generateJournalEntriesFromTransactionsAction,
     generateJournalEntriesFromPurchasesAction,
     generateJournalEntriesFromReturnsAction,
@@ -162,6 +163,25 @@ export function useFinancialReports() {
         }
     }, [loadJournalEntries]);
 
+    const calculateBalanceSheet = useCallback(async (
+        startDate: string,
+        endDate: string
+    ): Promise<BalanceSheetData> => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await calculateBalanceSheetAction(startDate, endDate);
+            return data;
+        } catch (err: any) {
+            const errorMessage = err?.message || 'Gagal menghitung neraca';
+            setError(errorMessage);
+            console.error('useFinancialReports: Calculate balance sheet error:', errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         loadReports();
         loadChartOfAccounts();
@@ -180,7 +200,9 @@ export function useFinancialReports() {
         loadChartOfAccounts,
         loadJournalEntries,
         saveReport,
+
         calculateProfitLoss,
+        calculateBalanceSheet,
         generateJournalEntries,
         generatePurchaseJournalEntries
     };
@@ -223,160 +245,24 @@ export function useBalanceSheet() {
     const [data, setData] = useState<BalanceSheetData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { calculateBalanceSheet: calculateBalanceSheetFn } = useFinancialReports();
 
     const calculate = useCallback(async (startDate: string, endDate: string) => {
         setLoading(true);
         setError(null);
         try {
-            // Get journal entries for the period
-            const entries = await getJournalEntriesAction(startDate, endDate);
-            
-            // Initialize balance sheet data
-            const balanceSheet: BalanceSheetData = {
-                assets: {
-                    current_assets: {
-                        cash: 0,
-                        bank: 0,
-                        accounts_receivable: 0,
-                        inventory: 0,
-                        total_current_assets: 0
-                    },
-                    fixed_assets: {
-                        equipment: 0,
-                        accumulated_depreciation: 0,
-                        net_fixed_assets: 0
-                    },
-                    total_assets: 0
-                },
-                liabilities: {
-                    current_liabilities: {
-                        accounts_payable: 0,
-                        accrued_expenses: 0,
-                        total_current_liabilities: 0
-                    },
-                    total_liabilities: 0
-                },
-                equity: {
-                    capital: 0,
-                    retained_earnings: 0,
-                    current_year_profit: 0,
-                    total_equity: 0
-                }
-            };
-
-            // Process journal entries to calculate balance sheet
-            for (const entry of entries as any) {
-                if (entry.journal_entry_lines) {
-                    for (const line of entry.journal_entry_lines) {
-                        const { chart_of_accounts: account } = line;
-                        
-                        if (!account) continue;
-
-                        // Assets (100-199)
-                        if (account.account_type === 'asset') {
-                            if (account.account_code.startsWith('110')) {
-                                balanceSheet.assets.current_assets.cash += line.debit_amount - line.credit_amount;
-                            } else if (account.account_code.startsWith('120')) {
-                                balanceSheet.assets.current_assets.bank += line.debit_amount - line.credit_amount;
-                            } else if (account.account_code.startsWith('130')) {
-                                balanceSheet.assets.current_assets.accounts_receivable += line.debit_amount - line.credit_amount;
-                            } else if (account.account_code.startsWith('140')) {
-                                balanceSheet.assets.current_assets.inventory += line.debit_amount - line.credit_amount;
-                            } else if (account.account_code.startsWith('150')) {
-                                balanceSheet.assets.fixed_assets.equipment += line.debit_amount - line.credit_amount;
-                            }
-                        }
-
-                        // Liabilities (200-299)
-                        if (account.account_type === 'liability') {
-                            if (account.account_code.startsWith('200')) {
-                                balanceSheet.liabilities.current_liabilities.accounts_payable += line.credit_amount - line.debit_amount;
-                            }
-                        }
-
-                        // Equity (300-399)
-                        if (account.account_type === 'equity') {
-                            if (account.account_code.startsWith('300')) {
-                                balanceSheet.equity.capital += line.credit_amount - line.debit_amount;
-                            } else if (account.account_code.startsWith('330')) {
-                                balanceSheet.equity.retained_earnings += line.credit_amount - line.debit_amount;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Direct queries for accurate real-time data
-            
-            // Get current inventory value from data_barang
-            const { data: inventory } = await supabase
-                .from('data_barang')
-                .select('quantity, purchase_price');
-
-            if (inventory && inventory.length > 0) {
-                const inventoryValue = inventory.reduce((sum: number, item: any) => 
-                    sum + ((item.quantity || 0) * (item.purchase_price || 0)), 0);
-                balanceSheet.assets.current_assets.inventory += inventoryValue;
-            }
-
-            // Get unpaid purchases (accounts payable)
-            const { data: unpaidPurchases } = await supabase
-                .from('purchases')
-                .select('final_amount, paid_amount')
-                .in('payment_status', ['pending', 'partial'])
-                .lte('purchase_date', endDate);
-
-            if (unpaidPurchases && unpaidPurchases.length > 0) {
-                const payableAmount = unpaidPurchases.reduce((sum: number, p: any) => 
-                    sum + ((p.final_amount || 0) - (p.paid_amount || 0)), 0);
-                balanceSheet.liabilities.current_liabilities.accounts_payable += payableAmount;
-            }
-
-
-            // Calculate totals
-            balanceSheet.assets.current_assets.total_current_assets = 
-                balanceSheet.assets.current_assets.cash + 
-                balanceSheet.assets.current_assets.bank + 
-                balanceSheet.assets.current_assets.accounts_receivable + 
-                balanceSheet.assets.current_assets.inventory;
-
-            balanceSheet.assets.fixed_assets.net_fixed_assets = 
-                balanceSheet.assets.fixed_assets.equipment - 
-                balanceSheet.assets.fixed_assets.accumulated_depreciation;
-
-            balanceSheet.assets.total_assets = 
-                balanceSheet.assets.current_assets.total_current_assets + 
-                balanceSheet.assets.fixed_assets.net_fixed_assets;
-
-            balanceSheet.liabilities.current_liabilities.total_current_liabilities = 
-                balanceSheet.liabilities.current_liabilities.accounts_payable + 
-                balanceSheet.liabilities.current_liabilities.accrued_expenses;
-
-            balanceSheet.liabilities.total_liabilities = 
-                balanceSheet.liabilities.current_liabilities.total_current_liabilities;
-
-            balanceSheet.equity.current_year_profit = 
-                balanceSheet.assets.total_assets - 
-                balanceSheet.liabilities.total_liabilities - 
-                balanceSheet.equity.capital - 
-                balanceSheet.equity.retained_earnings;
-
-            balanceSheet.equity.total_equity = 
-                balanceSheet.equity.capital + 
-                balanceSheet.equity.retained_earnings + 
-                balanceSheet.equity.current_year_profit;
-
-            setData(balanceSheet);
-            return balanceSheet;
+            const result = await calculateBalanceSheetFn(startDate, endDate);
+            setData(result);
+            return result;
         } catch (err: any) {
-            const errorMessage = err?.message || 'Gagal menghitung neraca keuangan';
+            const errorMessage = err?.message || 'Gagal menghitung neraca';
             setError(errorMessage);
             console.error('useBalanceSheet: Calculate error:', errorMessage);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [calculateBalanceSheetFn]);
 
     return {
         data,
@@ -398,7 +284,7 @@ export function useCashFlow() {
         try {
             // Get journal entries for the period
             const entries = await getJournalEntriesAction(startDate, endDate);
-            
+
             // Initialize cash flow data
             const cashFlow: CashFlowData = {
                 operating_activities: {
@@ -428,7 +314,7 @@ export function useCashFlow() {
                 if (entry.journal_entry_lines && Array.isArray(entry.journal_entry_lines)) {
                     for (const line of entry.journal_entry_lines) {
                         const { chart_of_accounts: account } = line;
-                        
+
                         if (!account) continue;
 
                         // Operating activities
@@ -458,7 +344,7 @@ export function useCashFlow() {
             }
 
             // Direct queries for accurate real-time cash flow data
-            
+
             // Get paid transactions (cash from customers)
             const { data: paidTransactions } = await supabase
                 .from('data_transaksi')
@@ -468,7 +354,7 @@ export function useCashFlow() {
                 .lte('saved_at', endDate);
 
             if (paidTransactions && paidTransactions.length > 0) {
-                cashFlow.operating_activities.cash_from_customers += 
+                cashFlow.operating_activities.cash_from_customers +=
                     paidTransactions.reduce((sum: number, t: any) => sum + (t.total || 0), 0);
             }
 
@@ -481,29 +367,29 @@ export function useCashFlow() {
                 .lte('purchase_date', endDate);
 
             if (paidPurchases && paidPurchases.length > 0) {
-                cashFlow.operating_activities.cash_paid_to_suppliers += 
+                cashFlow.operating_activities.cash_paid_to_suppliers +=
                     paidPurchases.reduce((sum: number, p: any) => sum + (p.paid_amount || 0), 0);
             }
 
 
             // Calculate totals
-            cashFlow.operating_activities.net_operating_cash = 
-                cashFlow.operating_activities.cash_from_customers - 
-                cashFlow.operating_activities.cash_paid_to_suppliers - 
-                cashFlow.operating_activities.cash_paid_to_mechanics - 
+            cashFlow.operating_activities.net_operating_cash =
+                cashFlow.operating_activities.cash_from_customers -
+                cashFlow.operating_activities.cash_paid_to_suppliers -
+                cashFlow.operating_activities.cash_paid_to_mechanics -
                 cashFlow.operating_activities.cash_paid_for_expenses;
 
-            cashFlow.investing_activities.net_investing_cash = 
-                cashFlow.investing_activities.equipment_purchase + 
+            cashFlow.investing_activities.net_investing_cash =
+                cashFlow.investing_activities.equipment_purchase +
                 cashFlow.investing_activities.equipment_sale;
 
-            cashFlow.financing_activities.net_financing_cash = 
-                cashFlow.financing_activities.capital_injection - 
+            cashFlow.financing_activities.net_financing_cash =
+                cashFlow.financing_activities.capital_injection -
                 cashFlow.financing_activities.owner_drawings;
 
-            cashFlow.net_cash_change = 
-                cashFlow.operating_activities.net_operating_cash + 
-                cashFlow.investing_activities.net_investing_cash + 
+            cashFlow.net_cash_change =
+                cashFlow.operating_activities.net_operating_cash +
+                cashFlow.investing_activities.net_investing_cash +
                 cashFlow.financing_activities.net_financing_cash;
 
             // For simplicity, assuming cash beginning is 0 (should be calculated from previous period)

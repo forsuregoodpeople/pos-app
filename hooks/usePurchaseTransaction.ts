@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createPurchaseAction, generatePurchaseInvoiceNumber } from "@/services/pembelian/pembelian";
+import { createPurchaseAction } from "@/services/pembelian/pembelian";
+import { generatePurchaseInvoiceNumber } from "@/lib/utils";
 
 export function usePurchaseTransaction() {
     const [loading, setLoading] = useState(false);
@@ -19,12 +20,12 @@ export function usePurchaseTransaction() {
 
         try {
             const invoiceNumber = generatePurchaseInvoiceNumber();
-            
+
             // Logic: Use the passed paymentStatus
             // If user selected "Belum Lunas" -> Force pending even if payment method exists (though UI hides it)
             // If user selected "Lunas" -> Paid
             const isPaid = paymentStatus === 'paid';
-            
+
             const purchaseData = {
                 invoice_number: invoiceNumber,
                 supplier_id: supplier?.id,

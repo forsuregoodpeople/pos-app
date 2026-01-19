@@ -1,4 +1,6 @@
-import { supabase } from '@/lib/supabase';
+"use server";
+
+import { createClient } from '@/lib/supabase-server';
 
 export interface FinancialReport {
     id: number;
@@ -142,6 +144,7 @@ export async function getFinancialReportsAction(
     limit: number = 50
 ): Promise<FinancialReport[]> {
     try {
+        const supabase = await createClient();
         let query = supabase
             .from('financial_reports')
             .select('*')
@@ -179,6 +182,7 @@ export async function saveFinancialReportAction(
     reportData: any
 ): Promise<FinancialReport> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('financial_reports')
             .insert({
@@ -203,6 +207,7 @@ export async function saveFinancialReportAction(
 // Chart of Accounts functions
 export async function getChartOfAccountsAction(): Promise<ChartOfAccount[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('chart_of_accounts')
             .select('*')
@@ -228,6 +233,7 @@ export async function getJournalEntriesAction(
     limit: number = 100
 ): Promise<JournalEntry[]> {
     try {
+        const supabase = await createClient();
         let query = supabase
             .from('journal_entries')
             .select(`
@@ -285,6 +291,7 @@ export async function createJournalEntryAction(
     }>
 ): Promise<JournalEntry> {
     try {
+        const supabase = await createClient();
         // Validate that debits equal credits
         const totalDebits = lines.reduce((sum, line) => sum + line.debit_amount, 0);
         const totalCredits = lines.reduce((sum, line) => sum + line.credit_amount, 0);
@@ -337,9 +344,7 @@ export async function calculateProfitLossAction(
     endDate: string
 ): Promise<ProfitLossData> {
     try {
-        // Get all journal entries for period
-        const journalEntries = await getJournalEntriesAction(startDate, endDate);
-
+        const supabase = await createClient();
         // Initialize data structure
         const profitLoss: ProfitLossData = {
             revenue: {
@@ -363,59 +368,23 @@ export async function calculateProfitLossAction(
             }
         };
 
-        // Process journal entries
-        for (const entry of journalEntries) {
-            if (entry.journal_entry_lines) {
-                for (const line of entry.journal_entry_lines) {
-                    const { chart_of_accounts: account } = line;
+        // Ensure endDate includes the full day (23:59:59) if it's just a date string
+        const effectiveEndDate = endDate.length === 10 ? `${endDate}T23:59:59` : endDate;
 
-                    if (!account) continue;
-
-                    // Revenue accounts (400-499)
-                    if (account.account_type === 'revenue') {
-                        if (account.account_code.startsWith('400')) {
-                            profitLoss.revenue.service_revenue += line.credit_amount;
-                        } else if (account.account_code.startsWith('410')) {
-                            profitLoss.revenue.product_revenue += line.credit_amount;
-                        } else if (account.account_code.startsWith('420')) {
-                            profitLoss.revenue.other_revenue += line.credit_amount;
-                        }
-                    }
-
-                    // Expense accounts (500-599)
-                    if (account.account_type === 'expense') {
-                        if (account.account_code.startsWith('500')) {
-                            profitLoss.expenses.cost_of_goods_sold += line.debit_amount;
-                        } else if (account.account_code.startsWith('520')) {
-                            profitLoss.expenses.mechanic_commissions += line.debit_amount;
-                        } else if (account.account_code.startsWith('530')) {
-                            profitLoss.expenses.operating_expenses += line.debit_amount;
-                        } else if (account.account_code.startsWith('540')) {
-                            profitLoss.expenses.administrative_expenses += line.debit_amount;
-                        } else if (account.account_code.startsWith('550')) {
-                            profitLoss.expenses.depreciation_expenses += line.debit_amount;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Direct queries for accurate real-time data (fallback if journal entries not generated)
-        
-        // Get POS sales revenue
+        // 1. Calculate Revenue from Real Transactions (Source of Truth)
         const { data: transactions } = await supabase
             .from('data_transaksi')
-            .select('*')
+            .select('id, items, total, invoice_number, created_at, saved_at')
             .gte('saved_at', startDate)
-            .lte('saved_at', endDate);
+            .lte('saved_at', effectiveEndDate);
 
         if (transactions && transactions.length > 0) {
             for (const transaction of transactions) {
                 // Handle both string and already-parsed object
-                const items = typeof transaction.items === 'string' 
-                    ? JSON.parse(transaction.items) 
+                const items = typeof transaction.items === 'string'
+                    ? JSON.parse(transaction.items)
                     : (transaction.items || []);
-                    
+
                 for (const item of items) {
                     if (item.type === 'service') {
                         profitLoss.revenue.service_revenue += (item.price * item.qty);
@@ -426,32 +395,96 @@ export async function calculateProfitLossAction(
             }
         }
 
-        // Get purchase expenses (COGS)
+        // 2. Calculate COGS from Purchases (Source of Truth)
         const { data: purchases } = await supabase
             .from('purchases')
             .select('final_amount')
             .gte('purchase_date', startDate)
-            .lte('purchase_date', endDate);
+            .lte('purchase_date', effectiveEndDate);
 
         if (purchases && purchases.length > 0) {
-            profitLoss.expenses.cost_of_goods_sold += 
+            profitLoss.expenses.cost_of_goods_sold +=
                 purchases.reduce((sum, p) => sum + (p.final_amount || 0), 0);
         }
 
-        // Get purchase returns (reduce COGS)
+        // 3. Deduct Returns from COGS
         const { data: returns } = await supabase
             .from('purchase_returns')
             .select('total_amount')
             .gte('return_date', startDate)
-            .lte('return_date', endDate);
+            .lte('return_date', effectiveEndDate);
 
         if (returns && returns.length > 0) {
-            profitLoss.expenses.cost_of_goods_sold -= 
+            profitLoss.expenses.cost_of_goods_sold -=
                 returns.reduce((sum, r) => sum + (r.total_amount || 0), 0);
         }
 
+        // 4. Calculate Operating Expenses from NEW Expenses Table
+        const { data: expensesData } = await supabase
+            .from('expenses')
+            .select('amount, category')
+            .gte('date', startDate)
+            .lte('date', effectiveEndDate);
 
-        // Calculate totals
+        if (expensesData && expensesData.length > 0) {
+            for (const expense of expensesData) {
+                const category = expense.category.toLowerCase();
+                if (category.includes('gaji') || category.includes('komisi') || category.includes('mechanic')) {
+                    profitLoss.expenses.mechanic_commissions += Number(expense.amount);
+                } else if (category.includes('admin')) {
+                    profitLoss.expenses.administrative_expenses += Number(expense.amount);
+                } else if (category.includes('penyusutan') || category.includes('depreciation')) {
+                    profitLoss.expenses.depreciation_expenses += Number(expense.amount);
+                } else {
+                    profitLoss.expenses.operating_expenses += Number(expense.amount);
+                }
+            }
+        }
+
+        // 5. Calculate Mechanic Commissions from mechanic_performance LINKED to these transactions
+        // We use the transaction IDs to ensure we get exactly the commissions for the revenue shown above.
+        if (transactions && transactions.length > 0) {
+            const transactionIds = transactions.map(t => t.id);
+
+            // Chunk the IDs if there are too many (Supabase might have limit on 'in' clause)
+            // But usually 100-1000 is fine. limit is passed to getFinancialReports but not this func.
+            // calculateProfitLossAction handles full ranges? No, usually bounded.
+
+            const { data: mechanicPerformance } = await supabase
+                .from('mechanic_performance')
+                .select('commission_amount')
+                .in('transaction_id', transactionIds);
+
+            if (mechanicPerformance && mechanicPerformance.length > 0) {
+                const totalCommissions = mechanicPerformance.reduce((sum, mp) => sum + (Number(mp.commission_amount) || 0), 0);
+                profitLoss.expenses.mechanic_commissions += totalCommissions;
+            }
+        }
+
+        // 5. Fallback/Supplement with Journal Entries ONLY for things NOT covered above
+        // We strictly filter for "Other Revenue" or specific adjustments not in the main flow.
+        const journalEntries = await getJournalEntriesAction(startDate, endDate);
+
+        for (const entry of journalEntries) {
+            if (entry.journal_entry_lines) {
+                for (const line of entry.journal_entry_lines) {
+                    const { chart_of_accounts: account } = line;
+                    if (!account) continue;
+
+                    // Only look for "Other Revenue" (420)
+                    if (account.account_code.startsWith('420')) {
+                        profitLoss.revenue.other_revenue += line.credit_amount;
+                    }
+
+                    // We DO NOT add other expenses here to avoid confusion. 
+                    // We assume the 'expenses' table is now the SSOT for operating expenses.
+                    // Unless the user explicitly uses Journal Entries for adjustments.
+                    // For now, let's keep it simple: Real Ops Data + Expenses Table.
+                }
+            }
+        }
+
+        // Calculate Totals
         profitLoss.revenue.total_revenue =
             profitLoss.revenue.service_revenue +
             profitLoss.revenue.product_revenue +
@@ -470,7 +503,8 @@ export async function calculateProfitLossAction(
         profitLoss.profit.operating_profit =
             profitLoss.profit.gross_profit -
             profitLoss.expenses.operating_expenses -
-            profitLoss.expenses.administrative_expenses;
+            profitLoss.expenses.administrative_expenses -
+            profitLoss.expenses.mechanic_commissions;
 
         profitLoss.profit.net_profit =
             profitLoss.profit.operating_profit -
@@ -483,11 +517,13 @@ export async function calculateProfitLossAction(
     }
 }
 
+// Generate journal entries from transactions
 export async function generateJournalEntriesFromTransactionsAction(
     startDate: string,
     endDate: string
 ): Promise<void> {
     try {
+        const supabase = await createClient();
         // Get transactions for period
         const { data: transactions, error } = await supabase
             .from('data_transaksi')
@@ -571,6 +607,7 @@ export async function generateJournalEntriesFromPurchasesAction(
     endDate: string
 ): Promise<void> {
     try {
+        const supabase = await createClient();
         // Get purchases for period
         const { data: purchases, error } = await supabase
             .from('purchases')
@@ -612,8 +649,8 @@ export async function generateJournalEntriesFromPurchasesAction(
             // Credit: Accounts Payable (200) if pending, or Cash/Bank if paid
             if (purchase.payment_status === 'paid') {
                 // Determine payment account based on payment method
-                const paymentAccount = purchase.payment_method?.toLowerCase().includes('transfer') || 
-                                      purchase.payment_method?.toLowerCase().includes('bank')
+                const paymentAccount = purchase.payment_method?.toLowerCase().includes('transfer') ||
+                    purchase.payment_method?.toLowerCase().includes('bank')
                     ? accountMap.get('120') // Bank
                     : accountMap.get('110'); // Cash
 
@@ -662,6 +699,7 @@ export async function generateJournalEntriesFromReturnsAction(
     endDate: string
 ): Promise<void> {
     try {
+        const supabase = await createClient();
         // Get purchase returns for period
         const { data: returns, error } = await supabase
             .from('purchase_returns')
@@ -770,6 +808,7 @@ export async function getSeasonalityAnalysisAction(
     endDate?: string
 ): Promise<SeasonalityAnalysis> {
     try {
+        const supabase = await createClient();
         // Get transactions for period (default to last 2 years)
         const defaultStartDate = startDate || new Date(new Date().getFullYear() - 2, 0, 1).toISOString().split('T')[0];
         const defaultEndDate = endDate || new Date().toISOString().split('T')[0];
@@ -1006,5 +1045,163 @@ export async function getSeasonalityAnalysisAction(
     } catch (error) {
         console.error('Error calculating seasonality analysis:', error);
         throw new Error('Gagal menghitung analisis seasonality');
+    }
+}
+export async function calculateBalanceSheetAction(
+    startDate: string,
+    endDate: string
+): Promise<BalanceSheetData> {
+    try {
+        const supabase = await createClient();
+        const balanceSheet: BalanceSheetData = {
+            assets: {
+                current_assets: {
+                    cash: 0,
+                    bank: 0,
+                    accounts_receivable: 0,
+                    inventory: 0,
+                    total_current_assets: 0
+                },
+                fixed_assets: {
+                    equipment: 0,
+                    accumulated_depreciation: 0,
+                    net_fixed_assets: 0
+                },
+                total_assets: 0
+            },
+            liabilities: {
+                current_liabilities: {
+                    accounts_payable: 0,
+                    accrued_expenses: 0,
+                    total_current_liabilities: 0
+                },
+                total_liabilities: 0
+            },
+            equity: {
+                capital: 0,
+                retained_earnings: 0,
+                current_year_profit: 0,
+                total_equity: 0
+            }
+        };
+
+        // 1. Calculate Current Assets: Receivables (Piutang)
+        // Get all unpaid or partial transactions
+        const { data: unpaidTransactions } = await supabase
+            .from('data_transaksi')
+            .select('remaining_balance, status_pembayaran')
+            .neq('status_pembayaran', 'Lunas');
+
+        if (unpaidTransactions) {
+            balanceSheet.assets.current_assets.accounts_receivable = unpaidTransactions.reduce(
+                (sum, t) => sum + (t.remaining_balance || 0), 0
+            );
+        }
+
+        // 2. Calculate Current Assets: Inventory (Persediaan)
+        // Get all products and sum (stock * buy_price)
+        const { data: products } = await supabase
+            .from('data_barang')
+            .select('stok, harga_beli');
+
+        if (products) {
+            balanceSheet.assets.current_assets.inventory = products.reduce(
+                (sum, p) => sum + ((p.stok || 0) * (p.harga_beli || 0)), 0
+            );
+        }
+
+        // 3. Calculate Liabilities: Payables (Hutang)
+        // Get all unpaid purchases
+        const { data: unpaidPurchases } = await supabase
+            .from('purchases')
+            .select('remaining_balance')
+            .neq('payment_status', 'Lunas');
+
+        if (unpaidPurchases) {
+            balanceSheet.liabilities.current_liabilities.accounts_payable = unpaidPurchases.reduce(
+                (sum, p) => sum + (p.remaining_balance || 0), 0
+            );
+        }
+
+        // 4. Calculate Cash & Bank
+        // This is tricky without a ledger. We will do a rough calculation:
+        // Cash Flow = (Total Paid Income) - (Total Paid Expenses) - (Total Paid Purchases) relative to a baseline?
+        // For now, let's treat "Kas" as a catch-all for liquid assets derived from Profit.
+        // Actually, let's look at the Cash Flow implementation or just sum up all "paid" transactions.
+
+        // Sum all payments received (Revenue)
+        const { data: allTransactions } = await supabase
+            .from('data_transaksi')
+            .select('total, remaining_balance')
+            .lte('saved_at', endDate);
+
+        let totalCashIn = 0;
+        if (allTransactions) {
+            totalCashIn = allTransactions.reduce((sum, t) => sum + (t.total - (t.remaining_balance || 0)), 0);
+        }
+
+        // Sum all payments made (Purchases)
+        const { data: allPurchases } = await supabase
+            .from('purchases')
+            .select('grand_total, remaining_balance')
+            .lte('purchase_date', endDate);
+
+        let totalCashOutPurchases = 0;
+        if (allPurchases) {
+            totalCashOutPurchases = allPurchases.reduce((sum, p) => sum + (p.grand_total - (p.remaining_balance || 0)), 0);
+        }
+
+        // Sum all expenses
+        const { data: allExpenses } = await supabase
+            .from('expenses')
+            .select('amount')
+            .lte('date', endDate);
+
+        let totalCashOutExpenses = 0;
+        if (allExpenses) {
+            totalCashOutExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+        }
+
+        const estimatedCashBalance = totalCashIn - totalCashOutPurchases - totalCashOutExpenses;
+
+        // Put it all in Cash for simplicity, as we don't distinguish Bank vs Cash yet in the data source cleanly
+        if (estimatedCashBalance > 0) {
+            balanceSheet.assets.current_assets.cash = estimatedCashBalance;
+        } else {
+            // If negative, it might mean we started with capital, but for now show as is or 0
+            balanceSheet.assets.current_assets.cash = estimatedCashBalance;
+        }
+
+        // 5. Equity
+        // Retained Earnings = Assets - Liabilities
+        balanceSheet.assets.current_assets.total_current_assets =
+            balanceSheet.assets.current_assets.cash +
+            balanceSheet.assets.current_assets.bank +
+            balanceSheet.assets.current_assets.accounts_receivable +
+            balanceSheet.assets.current_assets.inventory;
+
+        balanceSheet.assets.total_assets =
+            balanceSheet.assets.current_assets.total_current_assets +
+            balanceSheet.assets.fixed_assets.net_fixed_assets;
+
+        balanceSheet.liabilities.current_liabilities.total_current_liabilities =
+            balanceSheet.liabilities.current_liabilities.accounts_payable +
+            balanceSheet.liabilities.current_liabilities.accrued_expenses;
+
+        balanceSheet.liabilities.total_liabilities =
+            balanceSheet.liabilities.current_liabilities.total_current_liabilities;
+
+        balanceSheet.equity.retained_earnings =
+            balanceSheet.assets.total_assets - balanceSheet.liabilities.total_liabilities;
+
+        balanceSheet.equity.total_equity =
+            balanceSheet.equity.retained_earnings +
+            balanceSheet.equity.capital +
+            balanceSheet.equity.current_year_profit;
+
+        return balanceSheet;
+    } catch (error) {
+        console.error('Error calculating balance sheet:', error);
+        throw new Error('Gagal menghitung neraca');
     }
 }

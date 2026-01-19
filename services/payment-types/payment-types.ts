@@ -21,9 +21,13 @@ export async function getPaymentTypesAction(): Promise<PaymentType[]> {
 
         if (error) throw error;
         return data || [];
-    } catch (error) {
-        console.error('Error fetching payment types:', error);
-        throw new Error('Gagal mengambil data tipe pembayaran');
+    } catch (error: any) {
+        console.error('Error fetching payment types:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details
+        });
+        throw new Error(error?.message || 'Gagal mengambil data tipe pembayaran');
     }
 }
 
@@ -35,11 +39,27 @@ export async function createPaymentTypeAction(paymentType: Omit<PaymentType, 'id
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error creating payment type:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                fullError: JSON.stringify(error, null, 2)
+            });
+            throw error;
+        }
         return data;
-    } catch (error) {
-        console.error('Error creating payment type:', error);
-        throw new Error('Gagal menambah tipe pembayaran');
+    } catch (error: any) {
+        console.error('Error creating payment type:', {
+            name: error?.name,
+            message: error?.message,
+            code: error?.code,
+            details: error?.details,
+            hint: error?.hint,
+            stack: error?.stack
+        });
+        throw new Error(error?.message || 'Gagal menambah tipe pembayaran');
     }
 }
 
@@ -54,9 +74,13 @@ export async function updatePaymentTypeAction(id: string, paymentType: Partial<O
 
         if (error) throw error;
         return data;
-    } catch (error) {
-        console.error('Error updating payment type:', error);
-        throw new Error('Gagal mengupdate tipe pembayaran');
+    } catch (error: any) {
+        console.error('Error updating payment type:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details
+        });
+        throw new Error(error?.message || 'Gagal mengupdate tipe pembayaran');
     }
 }
 
@@ -68,9 +92,13 @@ export async function deletePaymentTypeAction(id: string): Promise<void> {
             .eq('id', id);
 
         if (error) throw error;
-    } catch (error) {
-        console.error('Error deleting payment type:', error);
-        throw new Error('Gagal menghapus tipe pembayaran');
+    } catch (error: any) {
+        console.error('Error deleting payment type:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details
+        });
+        throw new Error(error?.message || 'Gagal menghapus tipe pembayaran');
     }
 }
 
@@ -91,9 +119,13 @@ export async function setDefaultPaymentTypeAction(id: string): Promise<void> {
             .eq('id', id);
 
         if (setDefaultError) throw setDefaultError;
-    } catch (error) {
-        console.error('Error setting default payment type:', error);
-        throw new Error('Gagal mengatur tipe pembayaran default');
+    } catch (error: any) {
+        console.error('Error setting default payment type:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details
+        });
+        throw new Error(error?.message || 'Gagal mengatur tipe pembayaran default');
     }
 }
 
@@ -109,8 +141,12 @@ export async function getDefaultPaymentTypeAction(): Promise<PaymentType | null>
             throw error;
         }
         return data;
-    } catch (error) {
-        console.error('Error fetching default payment type:', error);
-        throw new Error('Gagal mengambil tipe pembayaran default');
+    } catch (error: any) {
+        console.error('Error fetching default payment type:', {
+            message: error?.message,
+            code: error?.code,
+            details: error?.details
+        });
+        throw new Error(error?.message || 'Gagal mengambil tipe pembayaran default');
     }
 }

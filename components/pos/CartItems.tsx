@@ -36,6 +36,10 @@ interface CartItemsProps {
     onPaymentTypeChange?: (id: string) => void;
     paymentStatus?: 'paid' | 'pending';
     onPaymentStatusChange?: (status: 'paid' | 'pending') => void;
+    bankName?: string;
+    onBankNameChange?: (value: string) => void;
+    cardNumber?: string;
+    onCardNumberChange?: (value: string) => void;
 }
 
 export function CartItems({
@@ -63,9 +67,13 @@ export function CartItems({
     maxStocks = {},
     paymentTypes = [],
     selectedPaymentTypeId = "",
-    onPaymentTypeChange = () => {},
+    onPaymentTypeChange = () => { },
     paymentStatus = 'paid',
-    onPaymentStatusChange = () => {},
+    onPaymentStatusChange = () => { },
+    bankName = "",
+    onBankNameChange = () => { },
+    cardNumber = "",
+    onCardNumberChange = () => { },
 }: CartItemsProps) {
     const cartServices = cart.filter(item => item.type === "service");
     const cartParts = cart.filter(item => item.type === "part");
@@ -232,8 +240,8 @@ export function CartItems({
                         <Wrench className="w-4 h-4 text-green-600" />
                         <div className="flex-1 text-left">
                             <div className="font-medium text-gray-800">
-                                {mechanics.length > 0 
-                                    ? `${mechanics.length} Mekanik` 
+                                {mechanics.length > 0
+                                    ? `${mechanics.length} Mekanik`
                                     : "Tambah Mekanik"
                                 }
                             </div>
@@ -290,8 +298,8 @@ export function CartItems({
                     {/* Payment Status Selector */}
                     <div className="space-y-1 w-full">
                         <Label className="text-xs text-gray-500">Status Pembayaran</Label>
-                        <Select 
-                            value={paymentStatus} 
+                        <Select
+                            value={paymentStatus}
                             onValueChange={(value) => onPaymentStatusChange?.(value as 'paid' | 'pending')}
                         >
                             <SelectTrigger className="w-full h-8 text-xs">
@@ -307,6 +315,7 @@ export function CartItems({
                             </SelectContent>
                         </Select>
                     </div>
+
 
                     {/* Payment Type Selector */}
                     <div className="space-y-1 w-full">
@@ -324,6 +333,45 @@ export function CartItems({
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* Bank Details Inputs (Conditional) */}
+                    {(() => {
+                        const selectedType = paymentTypes.find(t => t.id === selectedPaymentTypeId);
+                        const isCash = selectedType?.name?.toLowerCase().includes('tunai') ||
+                            selectedType?.name?.toLowerCase().includes('cash');
+
+                        // Show inputs if payment type is selected AND it is NOT cash
+                        // Also show if no type is selected yet (or maybe hide? logic: only show if needed)
+                        // Actually, if no type selected, we don't know. But standard behavior is usually hide.
+                        // However, if we want to allow typing before selecting? No, better select first.
+                        if (selectedPaymentTypeId && !isCash) {
+                            return (
+                                <div className="grid grid-cols-2 gap-2 w-full">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500">Nama Bank</Label>
+                                        <input
+                                            type="text"
+                                            className="w-full h-8 text-xs border rounded px-2"
+                                            placeholder="BCA, Mandiri..."
+                                            value={bankName}
+                                            onChange={(e) => onBankNameChange?.(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500">No. Kartu / Ref</Label>
+                                        <input
+                                            type="text"
+                                            className="w-full h-8 text-xs border rounded px-2"
+                                            placeholder="4 Digit Terakhir / Ref"
+                                            value={cardNumber}
+                                            onChange={(e) => onCardNumberChange?.(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">

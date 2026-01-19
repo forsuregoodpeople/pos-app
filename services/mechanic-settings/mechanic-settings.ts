@@ -1,4 +1,6 @@
-import { supabase } from '@/lib/supabase';
+"use server";
+
+import { createClient } from '@/lib/supabase-server';
 
 export interface MechanicSetting {
     id: number;
@@ -36,6 +38,7 @@ export interface CommissionCalculation {
 // Mechanic Settings functions
 export async function getMechanicSettingsAction(): Promise<MechanicSettingWithMechanic[]> {
     try {
+        const supabase = await createClient();
         // First try the join query
         const { data, error } = await supabase
             .from('mechanic_settings')
@@ -52,7 +55,7 @@ export async function getMechanicSettingsAction(): Promise<MechanicSettingWithMe
                 console.log('Mechanic settings table not found or no permission, returning empty array');
                 return [];
             }
-            
+
             // Fallback: try without join if the join fails
             const { data: fallbackData, error: fallbackError } = await supabase
                 .from('mechanic_settings')
@@ -79,7 +82,7 @@ export async function getMechanicSettingsAction(): Promise<MechanicSettingWithMe
                             .select('name')
                             .eq('id', item.mechanic_id)
                             .single();
-                        
+
                         return {
                             ...item,
                             mechanic_name: mechanic?.name || 'Unknown'
@@ -92,16 +95,16 @@ export async function getMechanicSettingsAction(): Promise<MechanicSettingWithMe
                     }
                 })
             );
-            
+
             console.log('Mechanic settings fetched successfully (fallback):', result.length, 'items');
             return result;
         }
-        
+
         const result = data?.map(item => ({
             ...item,
             mechanic_name: item.data_mekanik?.name || 'Unknown'
         })) || [];
-        
+
         console.log('Mechanic settings fetched successfully:', result.length, 'items');
         return result;
     } catch (error) {
@@ -113,6 +116,7 @@ export async function getMechanicSettingsAction(): Promise<MechanicSettingWithMe
 
 export async function getMechanicSettingByIdAction(mechanicId: number): Promise<MechanicSetting | null> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('mechanic_settings')
             .select('*')
@@ -135,6 +139,7 @@ export async function getMechanicSettingByIdAction(mechanicId: number): Promise<
 
 export async function createMechanicSettingAction(setting: Omit<MechanicSetting, 'id' | 'created_at' | 'updated_at'>): Promise<MechanicSetting> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('mechanic_settings')
             .upsert(setting, {
@@ -153,6 +158,7 @@ export async function createMechanicSettingAction(setting: Omit<MechanicSetting,
 
 export async function updateMechanicSettingAction(id: number, setting: Partial<Omit<MechanicSetting, 'id' | 'created_at' | 'updated_at'>>): Promise<MechanicSetting> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('mechanic_settings')
             .update({ ...setting, updated_at: new Date().toISOString() })
@@ -170,6 +176,7 @@ export async function updateMechanicSettingAction(id: number, setting: Partial<O
 
 export async function deleteMechanicSettingAction(id: number): Promise<void> {
     try {
+        const supabase = await createClient();
         const { error } = await supabase
             .from('mechanic_settings')
             .update({ is_active: false })
@@ -185,6 +192,7 @@ export async function deleteMechanicSettingAction(id: number): Promise<void> {
 // Global Settings functions
 export async function getGlobalSettingsAction(): Promise<GlobalSetting[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('global_settings')
             .select('*')
@@ -193,7 +201,7 @@ export async function getGlobalSettingsAction(): Promise<GlobalSetting[]> {
         if (error) {
             // Check if table doesn't exist or permission denied
             if (error.code === 'PGRST116' || error.code === '42501') {
-                console.log('Global settings table not found or no permission, returning empty array');
+                console.log('Global settings table not found or permission denied, returning empty array');
                 return [];
             }
             if (error && Object.keys(error).length > 0) {
@@ -210,6 +218,7 @@ export async function getGlobalSettingsAction(): Promise<GlobalSetting[]> {
 
 export async function getGlobalSettingByKeyAction(key: string): Promise<GlobalSetting | null> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('global_settings')
             .select('*')
@@ -240,6 +249,7 @@ export async function getGlobalSettingByKeyAction(key: string): Promise<GlobalSe
 
 export async function updateGlobalSettingAction(key: string, value: string): Promise<GlobalSetting> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('global_settings')
             .upsert({
@@ -270,6 +280,7 @@ export async function calculateCommissionForMechanicsAction(
     mechanicPercentages: { mechanic_id: number; percentage: number }[]
 ): Promise<CommissionCalculation[]> {
     try {
+        const supabase = await createClient();
         // Get mechanic settings
         const { data: settings, error: settingsError } = await supabase
             .from('mechanic_settings')
@@ -292,7 +303,7 @@ export async function calculateCommissionForMechanicsAction(
         for (const mechanicPercentage of mechanicPercentages) {
             const setting = settings?.find(s => s.mechanic_id === mechanicPercentage.mechanic_id);
             const shopCutPercentage = setting?.shop_cut_percentage || defaultShopCut;
-            
+
             const shopCutAmount = (totalRevenue * shopCutPercentage) / 100;
             const mechanicShareAmount = totalRevenue - shopCutAmount;
             const finalCommissionAmount = (mechanicShareAmount * mechanicPercentage.percentage) / 100;
@@ -305,7 +316,7 @@ export async function calculateCommissionForMechanicsAction(
                     .select('name')
                     .eq('id', mechanicPercentage.mechanic_id)
                     .single();
-                
+
                 mechanicName = mechanic?.name || 'Unknown';
             } catch (mechanicError) {
                 if (mechanicError && Object.keys(mechanicError).length > 0) {

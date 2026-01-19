@@ -1,4 +1,6 @@
-import { supabase } from '@/lib/supabase';
+'use server'
+
+import { createClient } from '@/lib/supabase-server';
 import { adjustStockAction } from '@/services/data-barang/data-barang';
 
 export interface Supplier {
@@ -68,6 +70,7 @@ export interface PurchaseReturnItem {
 // Supplier functions
 export async function getSuppliersAction(): Promise<Supplier[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('suppliers')
             .select('*')
@@ -83,6 +86,7 @@ export async function getSuppliersAction(): Promise<Supplier[]> {
 
 export async function createSupplierAction(supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>): Promise<Supplier> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('suppliers')
             .insert(supplier)
@@ -99,6 +103,7 @@ export async function createSupplierAction(supplier: Omit<Supplier, 'id' | 'crea
 
 export async function updateSupplierAction(id: string, supplier: Partial<Omit<Supplier, 'id' | 'created_at' | 'updated_at'>>): Promise<Supplier> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('suppliers')
             .update({ ...supplier, updated_at: new Date().toISOString() })
@@ -116,6 +121,7 @@ export async function updateSupplierAction(id: string, supplier: Partial<Omit<Su
 
 export async function deleteSupplierAction(id: string): Promise<void> {
     try {
+        const supabase = await createClient();
         const { error } = await supabase
             .from('suppliers')
             .delete()
@@ -131,6 +137,7 @@ export async function deleteSupplierAction(id: string): Promise<void> {
 // Purchase functions
 export async function getPurchasesAction(): Promise<Purchase[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('purchases')
             .select(`
@@ -150,6 +157,7 @@ export async function getPurchasesAction(): Promise<Purchase[]> {
 
 export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'created_at' | 'updated_at' | 'items'>, items: Omit<PurchaseItem, 'id' | 'purchase_id' | 'created_at'>[]): Promise<Purchase> {
     try {
+        const supabase = await createClient();
         // Start a transaction-like operation
         const { data: purchaseData, error: purchaseError } = await supabase
             .from('purchases')
@@ -225,6 +233,7 @@ export async function createPurchaseAction(purchase: Omit<Purchase, 'id' | 'crea
 
 export async function updatePurchaseAction(id: string, purchase: Partial<Omit<Purchase, 'id' | 'created_at' | 'updated_at' | 'items'>>): Promise<Purchase> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('purchases')
             .update({ ...purchase, updated_at: new Date().toISOString() })
@@ -242,6 +251,7 @@ export async function updatePurchaseAction(id: string, purchase: Partial<Omit<Pu
 
 export async function deletePurchaseAction(id: string): Promise<void> {
     try {
+        const supabase = await createClient();
         const { error } = await supabase
             .from('purchases')
             .delete()
@@ -257,6 +267,7 @@ export async function deletePurchaseAction(id: string): Promise<void> {
 // Purchase return functions
 export async function getPurchaseReturnsAction(): Promise<PurchaseReturn[]> {
     try {
+        const supabase = await createClient();
         const { data, error } = await supabase
             .from('purchase_returns')
             .select(`
@@ -279,6 +290,7 @@ export async function getPurchaseReturnsAction(): Promise<PurchaseReturn[]> {
 
 export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn, 'id' | 'created_at'>, returnItems: Omit<PurchaseReturnItem, 'id' | 'purchase_return_id' | 'created_at'>[]): Promise<PurchaseReturn> {
     try {
+        const supabase = await createClient();
         // Start a transaction-like operation
         const { data: returnDataResult, error: returnError } = await supabase
             .from('purchase_returns')
@@ -352,6 +364,7 @@ export async function createPurchaseReturnAction(returnData: Omit<PurchaseReturn
 
 export async function updatePurchaseReturnAction(id: string, returnData: Partial<Omit<PurchaseReturn, 'id' | 'created_at' | 'purchase_id'>>, returnItems: Omit<PurchaseReturnItem, 'id' | 'purchase_return_id' | 'created_at'>[]): Promise<PurchaseReturn> {
     try {
+        const supabase = await createClient();
         // Update header info
         const { data: updatedReturn, error: updateError } = await supabase
             .from('purchase_returns')
@@ -411,6 +424,7 @@ export async function updatePurchaseReturnAction(id: string, returnData: Partial
 
 export async function deletePurchaseReturnAction(id: string): Promise<void> {
     try {
+        const supabase = await createClient();
         // Items will be deleted by cascade if configured, otherwise we should delete them first.
         // Assuming cascade delete is set on the foreign key relation in DB.
         // If not, we do explicit delete:
@@ -426,11 +440,4 @@ export async function deletePurchaseReturnAction(id: string): Promise<void> {
         console.error('Error deleting purchase return:', error);
         throw new Error('Gagal menghapus retur pembelian');
     }
-}
-
-// Generate purchase invoice number
-export function generatePurchaseInvoiceNumber(): string {
-    const date = new Date();
-    const timestamp = Date.now() % 1000;
-    return `PUR-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${String(timestamp).padStart(3, '0')}`;
 }

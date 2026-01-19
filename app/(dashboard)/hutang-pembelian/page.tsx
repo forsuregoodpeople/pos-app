@@ -71,7 +71,7 @@ export default function HutangPembelianPage() {
                 const remainingAmount = purchase.final_amount - (purchase.paid_amount || 0);
                 supplierDebts[supplierName].count += 1;
                 supplierDebts[supplierName].amount += remainingAmount;
-                
+
                 if (purchase.due_date && new Date(purchase.due_date) < new Date()) {
                     supplierDebts[supplierName].overdue += remainingAmount;
                 }
@@ -143,7 +143,7 @@ export default function HutangPembelianPage() {
     // Get payment status badge
     const getPaymentStatusBadge = (status: string, dueDate?: string) => {
         const isOverdue = dueDate && new Date(dueDate) < new Date();
-        
+
         if (isOverdue) {
             return (
                 <Badge variant="destructive" className="text-xs font-medium">
@@ -227,7 +227,7 @@ export default function HutangPembelianPage() {
                         <Calculator className="w-4 h-4 text-gray-500" />
                         <span className="text-sm font-medium">Filter:</span>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Select value={dateFilter} onValueChange={setDateFilter}>
                             <SelectTrigger className="w-full sm:w-48 text-sm h-10">
@@ -275,114 +275,6 @@ export default function HutangPembelianPage() {
                     </div>
                 ) : (
                     <>
-                        {/* Metrics Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Hutang</CardTitle>
-                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-red-600">
-                                        {formatCurrency(debtMetrics.totalDebt)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {debtMetrics.totalUnpaid} transaksi belum lunas
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Terlambat Bayar</CardTitle>
-                                    <AlertCircle className="h-4 w-4 text-red-500" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-red-600">
-                                        {formatCurrency(debtMetrics.overdueAmount)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {debtMetrics.overdueCount} transaksi terlambat
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Jumlah Supplier</CardTitle>
-                                    <Building className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-blue-600">
-                                        {debtMetrics.topSupplierDebts.length}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Supplier dengan hutang
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Rata-rata Hutang</CardTitle>
-                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-yellow-600">
-                                        {formatCurrency(debtMetrics.totalUnpaid > 0 ? debtMetrics.totalDebt / debtMetrics.totalUnpaid : 0)}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Per transaksi
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Top Supplier Debts */}
-                        <Card className="mb-8">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building className="h-4 w-4" />
-                                    Hutang per Supplier
-                                </CardTitle>
-                                <CardDescription>
-                                    5 supplier dengan hutang terbesar
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {debtMetrics.topSupplierDebts.length > 0 ? (
-                                        debtMetrics.topSupplierDebts.map((supplier, index) => (
-                                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs font-medium text-gray-500">#{index + 1}</span>
-                                                    <div>
-                                                        <div className="font-medium text-gray-900">{supplier.name}</div>
-                                                        <div className="text-xs text-gray-500">{supplier.count} transaksi</div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-sm font-bold text-red-600">
-                                                        {formatCurrency(supplier.amount)}
-                                                    </div>
-                                                    {supplier.overdue > 0 && (
-                                                        <div className="text-xs text-red-500">
-                                                            {formatCurrency(supplier.overdue)} terlambat
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center text-gray-500 py-8">
-                                            <Building className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                            <p className="text-sm">Tidak ada hutang pembelian</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-
                         {/* Debts Table */}
                         <Card>
                             <CardHeader>

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    getSuppliersAction, 
-    createSupplierAction, 
-    updateSupplierAction, 
+import {
+    getSuppliersAction,
+    createSupplierAction,
+    updateSupplierAction,
     deleteSupplierAction,
     getPurchasesAction,
     createPurchaseAction,
@@ -12,11 +12,11 @@ import {
     createPurchaseReturnAction,
     updatePurchaseReturnAction,
     deletePurchaseReturnAction,
-    generatePurchaseInvoiceNumber,
     Supplier,
     Purchase,
     PurchaseReturn
 } from '@/services/pembelian/pembelian';
+import { generatePurchaseInvoiceNumber } from '@/lib/utils';
 
 export function useSuppliers() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);

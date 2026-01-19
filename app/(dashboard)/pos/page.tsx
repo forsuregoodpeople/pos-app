@@ -10,6 +10,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useDataBarang } from "@/hooks/useDataBarang";
 import { useDataJasa } from "@/hooks/useDataJasa";
 import { useTransaction } from "@/hooks/useTransaction";
+import { getNextInvoiceNumberAction } from "@/services/data-transaksi/data-transaksi";
 import { useCustomerHistory } from "@/hooks/useCustomerHistory";
 import { useMechanics } from "@/hooks/useMechanics";
 import { MechanicModal } from "@/components/pos/MechanicModal";
@@ -55,18 +56,27 @@ export default function PointOnSale() {
     const { items: paymentTypes, loadPaymentTypes } = usePaymentTypes();
     const [selectedPaymentTypeId, setSelectedPaymentTypeId] = useState<string>("");
     const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
+    const [bankName, setBankName] = useState("");
+    const [cardNumber, setCardNumber] = useState("");
 
     const [invoiceNumber, setInvoiceNumber] = useState("INV-LOADING");
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
         setIsClient(true);
-        const d = new Date();
-        // Use timestamp instead of random to avoid hydration mismatch
-        const timestamp = Date.now() % 1000;
-        const newInvoiceNumber = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(timestamp).padStart(3, "0")}`;
-        setInvoiceNumber(newInvoiceNumber);
-        
+
+        // Get next invoice number from server
+        getNextInvoiceNumberAction().then((nextInvoice) => {
+            setInvoiceNumber(nextInvoice);
+        }).catch((error) => {
+            console.error('Error getting next invoice number:', error);
+            // Fallback to timestamp-based if server action fails
+            const d = new Date();
+            const timestamp = Date.now() % 1000;
+            const fallbackInvoice = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(timestamp).padStart(3, "0")}`;
+            setInvoiceNumber(fallbackInvoice);
+        });
+
         // Detect tablet/iPad
         const checkTablet = () => {
             const width = window.innerWidth;
@@ -74,7 +84,7 @@ export default function PointOnSale() {
             const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
             setIsTablet(width >= 768 && width <= 1024 && (isTouchDevice || isIPad));
         };
-        
+
         checkTablet();
         window.addEventListener('resize', checkTablet);
 
@@ -118,17 +128,17 @@ export default function PointOnSale() {
                     addToCartWithQty(itemToAdd, item.type);
                 });
             }
-            
+
             setKeterangan(String(transaction.keterangan || ''));
             if ((transaction as any).payment_type_id) {
                 setSelectedPaymentTypeId((transaction as any).payment_type_id);
             } else if ((transaction as any).paymentTypeId) {
-                 setSelectedPaymentTypeId((transaction as any).paymentTypeId);
+                setSelectedPaymentTypeId((transaction as any).paymentTypeId);
             }
             setEditingInvoiceNumber(transaction.invoiceNumber);
             setIsEditMode(true);
             setShowEditTransactionModal(false);
-            
+
             toast.success("Transaksi berhasil dimuat untuk diedit!", { position: "bottom-left" });
         } catch (error) {
             console.error('Error loading transaction for edit:', error);
@@ -238,7 +248,7 @@ export default function PointOnSale() {
             if (savedCart.paymentTypeId) {
                 setSelectedPaymentTypeId(savedCart.paymentTypeId);
             } else {
-                 // reset to default if not saved
+                // reset to default if not saved
                 const defaultType = paymentTypes.find(t => t.is_default);
                 if (defaultType) setSelectedPaymentTypeId(defaultType.id);
             }
@@ -337,7 +347,7 @@ export default function PointOnSale() {
             const grandTotal = total + (biayaLain ?? 0);
 
             if (paymentStatus === 'paid' && !selectedPaymentTypeId) {
-                 return toast.error("Pilih tipe pembayaran untuk status Lunas!");
+                return toast.error("Pilih tipe pembayaran untuk status Lunas!");
             }
 
             const selectedPaymentType = paymentTypes.find(t => t.id === selectedPaymentTypeId);
@@ -362,13 +372,13 @@ export default function PointOnSale() {
             setBiayaLain(0);
             setKeterangan("");
             setPaymentStatus('paid'); // Reset to default
+            setBankName("");
+            setCardNumber("");
             setShowKeteranganModal(false);
 
             // Generate new invoice number after successful checkout
-            const d = new Date();
-            const timestamp = Date.now() % 1000;
-            const newInvoiceNumber = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(timestamp).padStart(3, "0")}`;
-            setInvoiceNumber(newInvoiceNumber);
+            const nextInvoice = await getNextInvoiceNumberAction();
+            setInvoiceNumber(nextInvoice);
 
             // reload page is kept (mirip behavior sebelumnya)
             window.location.reload();
@@ -380,7 +390,7 @@ export default function PointOnSale() {
 
     const handleUpdateTransaction = async () => {
         if (!isEditMode || !editingInvoiceNumber) return;
-        
+
         if (!cart.length) return toast.error("Keranjang masih kosong!");
         if (!customer?.name?.trim()) {
             setShowCustomerModal(true);
@@ -436,15 +446,15 @@ export default function PointOnSale() {
             setPpn(0);
             setBiayaLain(0);
             setKeterangan("");
+            setBankName("");
+            setCardNumber("");
             setShowKeteranganModal(false);
             setIsEditMode(false);
             setEditingInvoiceNumber(null);
 
             // Generate new invoice number after successful update
-            const d = new Date();
-            const timestamp = Date.now() % 1000;
-            const newInvoiceNumber = `INV-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(timestamp).padStart(3, "0")}`;
-            setInvoiceNumber(newInvoiceNumber);
+            const nextInvoice = await getNextInvoiceNumberAction();
+            setInvoiceNumber(nextInvoice);
 
             // Reload page
             window.location.reload();
@@ -504,7 +514,7 @@ export default function PointOnSale() {
                                 }}
                             />
                         </div>
-                        
+
                         {/* Main Content - Side by Side */}
                         <div className="flex-1 flex flex-row overflow-hidden">
                             {/* Product Grid - Left Side */}
@@ -519,7 +529,7 @@ export default function PointOnSale() {
                                     cartItems={cart}
                                 />
                             </div>
-                            
+
                             {/* Cart - Right Side */}
                             <aside className="w-80 bg-white border-l flex flex-col shadow-lg">
                                 <CartItems
@@ -549,6 +559,10 @@ export default function PointOnSale() {
                                     onPaymentTypeChange={setSelectedPaymentTypeId}
                                     paymentStatus={paymentStatus}
                                     onPaymentStatusChange={setPaymentStatus}
+                                    bankName={bankName}
+                                    onBankNameChange={setBankName}
+                                    cardNumber={cardNumber}
+                                    onCardNumberChange={setCardNumber}
                                 />
                             </aside>
                         </div>
@@ -609,6 +623,10 @@ export default function PointOnSale() {
                                 onPaymentTypeChange={setSelectedPaymentTypeId}
                                 paymentStatus={paymentStatus}
                                 onPaymentStatusChange={setPaymentStatus}
+                                bankName={bankName}
+                                onBankNameChange={setBankName}
+                                cardNumber={cardNumber}
+                                onCardNumberChange={setCardNumber}
                             />
                         </aside>
 
@@ -650,16 +668,20 @@ export default function PointOnSale() {
                                 onCustomerClick={() => setShowCustomerModal(true)}
                                 onMechanicClick={() => setShowMechanicModal(true)}
                                 onCheckout={handleCheckout}
-                               onSaveCart={saveCartToLocalStorage}
-                               onLoadSavedCart={() => setShowSavedCartsModal(true)}
-                               isMobile={true}
-                               maxStocks={maxStocks}
-                               paymentTypes={paymentTypes}
-                               selectedPaymentTypeId={selectedPaymentTypeId}
-                               onPaymentTypeChange={setSelectedPaymentTypeId}
-                               paymentStatus={paymentStatus}
-                               onPaymentStatusChange={setPaymentStatus}
-                           />
+                                onSaveCart={saveCartToLocalStorage}
+                                onLoadSavedCart={() => setShowSavedCartsModal(true)}
+                                isMobile={true}
+                                maxStocks={maxStocks}
+                                paymentTypes={paymentTypes}
+                                selectedPaymentTypeId={selectedPaymentTypeId}
+                                onPaymentTypeChange={setSelectedPaymentTypeId}
+                                paymentStatus={paymentStatus}
+                                onPaymentStatusChange={setPaymentStatus}
+                                bankName={bankName}
+                                onBankNameChange={setBankName}
+                                cardNumber={cardNumber}
+                                onCardNumberChange={setCardNumber}
+                            />
                         </div>
                     </div>
                 )}
@@ -798,7 +820,10 @@ export default function PointOnSale() {
                     biayaLain={biayaLain}
                     total={calculateTotal()}
                     keterangan={keterangan}
-                    paymentTypeName={paymentTypes.find(t => t.id === selectedPaymentTypeId)?.name}
+                    paymentTypeName={paymentTypes.find(p => p.id === selectedPaymentTypeId)?.name}
+                    bankName={bankName}
+                    cardNumber={cardNumber}
+                    mechanics={mechanics}
                 />
             </div>
         </SidebarInset>
