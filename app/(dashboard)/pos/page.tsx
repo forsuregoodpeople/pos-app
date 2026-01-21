@@ -339,7 +339,7 @@ export default function PointOnSale() {
 
             const customerWithMechanics = {
                 ...customer,
-                mekaniks: mechanics.length ? mechanics.map(m => ({ name: m.name, percentage: m.percentage })) : []
+                mekaniks: mechanics.length ? mechanics.map(m => ({ name: m.name, percentage: m.percentage, id: m.id })) : []
             };
 
             const subtotal = calculateSubtotal();

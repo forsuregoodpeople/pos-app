@@ -163,10 +163,10 @@ export async function saveTransactionAction(transaction: Transaction): Promise<T
         let mechanicCommissions: CommissionCalculation[] = [];
         if (transaction.customer.mekaniks && transaction.customer.mekaniks.length > 0) {
             try {
-                const mechanicIds = transaction.customer.mekaniks.map((m: any) => m.id);
+                const mechanicIds = transaction.customer.mekaniks.map((m: any) => Number(m.id));
                 const mechanicPercentages = transaction.customer.mekaniks.map((m: any) => ({
-                    mechanic_id: m.id,
-                    percentage: m.percentage
+                    mechanic_id: Number(m.id),
+                    percentage: Number(m.percentage)
                 }));
 
                 mechanicCommissions = await calculateCommissionForMechanicsAction(

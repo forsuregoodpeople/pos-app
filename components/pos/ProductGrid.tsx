@@ -185,7 +185,7 @@ export default function ProductGrid({
                         const isPart = activeTab === "parts";
                         const isService = activeTab === "services";
 
-                        const stock: number = isPart ? Number((item as any).quantity ?? 0) : 0;
+                        const stock: number = isPart ? (tempStock[item.id] ?? Number((item as any).quantity ?? 0)) : 0;
                         const lowStock = isPart && stock <= 5;
                         const itemType = (item as any).type || 'mutasi';
                         // Cast to Part to access new fields safely

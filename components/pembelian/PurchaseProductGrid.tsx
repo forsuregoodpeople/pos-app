@@ -31,7 +31,19 @@ export function PurchaseProductGrid({
     onAddToCart,
     cartItems = [],
 }: PurchaseProductGridProps) {
+    const [tempStock, setTempStock] = useState<Record<string, number>>({});
     const [partTypeFilter, setPartTypeFilter] = useState<'all' | 'mutasi' | 'bengkel'>('all');
+
+    useEffect(() => {
+        const newStock: Record<string, number> = {};
+        parts.forEach(part => {
+            const cartQty = cartItems
+                .filter(item => item.id === part.id)
+                .reduce((total, item) => total + item.qty, 0);
+            newStock[part.id] = (part.quantity || 0) + cartQty;
+        });
+        setTempStock(newStock);
+    }, [parts, cartItems]);
 
     // Reset filter when switching contexts
     useEffect(() => {
@@ -128,7 +140,7 @@ export function PurchaseProductGrid({
                     )}
 
                     {filteredParts.map((item) => {
-                        const stock = Number(item.quantity ?? 0);
+                        const stock = tempStock[item.id] ?? Number(item.quantity ?? 0);
                         const lowStock = stock <= 5;
                         const itemType = item.type || 'mutasi';
                         const displayPrice = item.purchase_price || item.price;
